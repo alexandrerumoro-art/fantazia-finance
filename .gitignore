@@ -1,0 +1,15 @@
+# Environnement virtuel
+.venv/
+venv/
+
+# Fichiers Python temporaires
+__pycache__/
+*.pyc
+
+# Répertoires de Streamlit
+.streamlit/
+
+# Fichiers sensibles / locaux
+config.json
+users.json
+watchlists.json

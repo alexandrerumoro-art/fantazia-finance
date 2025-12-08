@@ -76,7 +76,7 @@ TRANSLATIONS = {
         "sidebar_history": "Historique à charger",
         "sidebar_auto_adjust": "Prix ajustés (Yahoo)",
         "sidebar_source": "Source historique (fallback par action)",
-        "sidebar_rt": "Activer prix temps réel (Premium Polygon)",
+        "sidebar_rt": "Tenter prix live (Polygon, expérimental)",
         "sidebar_refresh": "Auto-refresh (optionnel)",
         "sidebar_no_tickers": "Aucun ticker sélectionné.",
         "sidebar_api_detected": "Clés API détectées : ",
@@ -231,7 +231,7 @@ TRANSLATIONS = {
         "sidebar_history": "History to load",
         "sidebar_auto_adjust": "Adjusted prices (Yahoo)",
         "sidebar_source": "Historical source (per-stock fallback)",
-        "sidebar_rt": "Enable real-time prices (Premium Polygon)",
+        "sidebar_rt": "Try live prices (Polygon, experimental)",
         "sidebar_refresh": "Auto-refresh (optional)",
         "sidebar_no_tickers": "No ticker selected.",
         "sidebar_api_detected": "API keys detected: ",
@@ -864,22 +864,6 @@ def perf_color(val):
     return ""
 
 
-def currency_symbol(code: str) -> str:
-    """Mappe une devise Yahoo (USD, EUR, GBP,...) vers un symbole lisible."""
-    c = str(code or "").upper()
-    if c == "USD":
-        return "$"
-    if c == "EUR":
-        return "€"
-    if c == "GBP":
-        return "£"
-    if c == "CHF":
-        return "CHF"
-    if c == "JPY":
-        return "¥"
-    return c if c else ""
-
-
 def safe_numeric(df, col):
     return pd.to_numeric(df.get(col), errors="coerce")
 
@@ -993,8 +977,23 @@ def filter_period_df(df: pd.DataFrame, period: str) -> pd.DataFrame:
 # PRICE PROVIDERS
 # =========================================================
 def fetch_yfinance_single(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
+    """
+    Yahoo Finance :
+    - 1d / 5d : interval 5m (intraday)
+    - sinon : interval 1d
+    """
     try:
-        data = yf.download([ticker], period=period, auto_adjust=auto_adjust, progress=False)
+        if period in ["1d", "5d"]:
+            interval = "5m"
+        else:
+            interval = "1d"
+        data = yf.download(
+            [ticker],
+            period=period,
+            interval=interval,
+            auto_adjust=auto_adjust,
+            progress=False
+        )
         if data is None or data.empty:
             return pd.Series(dtype=float)
         close = data["Close"] if "Close" in data else data
@@ -1093,7 +1092,7 @@ def fetch_finnhub_single(ticker: str, period: str) -> pd.Series:
 
 
 # =========================================================
-# REALTIME POLYGON
+# REALTIME POLYGON (EXPERIMENTAL)
 # =========================================================
 def fetch_realtime_polygon_last(ticker: str) -> Optional[Tuple[float, pd.Timestamp]]:
     if not POLYGON_API_KEY:
@@ -1198,7 +1197,7 @@ def get_provider_chain(source_mode: str) -> List[Tuple[str, ProviderFn]]:
     ]
 
 
-@st.cache_data
+@st.cache_data(ttl=900)  # <= données rafraîchies au max toutes les 15 min
 def load_prices_per_ticker(
     tickers: List[str],
     period: str,
@@ -1237,7 +1236,7 @@ def load_prices_per_ticker(
 # =========================================================
 # BENCHMARK (Indice)
 # =========================================================
-@st.cache_data
+@st.cache_data(ttl=900)
 def fetch_benchmark_series(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
     if not ticker:
         return pd.Series(dtype=float)
@@ -1642,7 +1641,7 @@ def faq_answer(question: str) -> str:
             "- les **alertes** (ruban + Alertes du jour),\n"
             "- le **simulateur de portefeuille**, \n"
             "- les **watchlists**, les **notes perso** et les **news suivies**, \n"
-            "- la 52w range, les sources de données (Yahoo, Twelve, Finnhub, Polygon).\n\n"
+            "- la 52w range, les sources de données (Yahoo, Twelve, Finnhub, Polygon expérimental).\n\n"
             "Pose ta question le plus clairement possible, par exemple :\n"
             "- \"Explique-moi le Fantazia Score personnalisé\"\n"
             "- \"Comment lire la corrélation ?\"\n"
@@ -1782,7 +1781,7 @@ def faq_answer(question: str) -> str:
             "- **alerts** (ribbon + Alerts of the day),\n"
             "- the **portfolio simulator**, \n"
             "- **watchlists**, **personal notes** and **followed news**, \n"
-            "- the 52w range, data sources (Yahoo, Twelve, Finnhub, Polygon).\n\n"
+            "- the 52w range, data sources (Yahoo, Twelve, Finnhub, experimental Polygon).\n\n"
             "Ask clearly, e.g.:\n"
             "- \"Explain the custom Fantazia Score\",\n"
             "- \"How to read correlation?\",\n"
@@ -1813,7 +1812,7 @@ with tab1:
     if use_realtime and POLYGON_API_KEY:
         rt_data = fetch_realtime_polygon_batch(list(prices.columns))
 
-    if st.button("🔄 Refresh prix temps réel"):
+    if st.button("🔄 Refresh prix temps réel (Polygon expérimental)"):
         if use_realtime and POLYGON_API_KEY:
             rt_data = fetch_realtime_polygon_batch(list(prices.columns))
 
@@ -2008,32 +2007,27 @@ with tab1:
     st.subheader(tr("prices_title"))
     cols_price = st.columns(min(4, len(prices_display.columns)))
     first_cols = list(prices_display.columns)[:len(cols_price)]
-
-    # Map ticker -> devise (fondamentaux)
-    currency_map = {}
-    if "Devise" in fund.columns:
-        currency_map = fund["Devise"].to_dict()
-
     for i, t in enumerate(first_cols):
         s = prices_display[t].dropna()
         if s.empty:
             continue
         last_close = prices[t].dropna().iloc[-1]
         last_disp = s.iloc[-1]
-        cur = currency_map.get(t, "")
-        sym = currency_symbol(cur)
+        cur = ""
+        if t in fund.index:
+            cur = str(fund.loc[t, "Devise"] or "")
+        unit = f" {cur}" if cur else ""
         if t in rt_data:
             rt_price, _ = rt_data[t]
             delta_pct = (rt_price / last_close - 1.0) * 100 if last_close else None
-            value_str = f"{rt_price:.2f} {sym}" if sym else f"{rt_price:.2f}"
+            suffix = "(Polygon expérimental)" if st.session_state.get("lang", "fr") == "fr" else "(Polygon experimental)"
             cols_price[i].metric(
-                label=f"{t} (Realtime premium)",
-                value=value_str,
+                label=f"{t} {suffix}",
+                value=f"{rt_price:.2f}{unit}",
                 delta=f"{delta_pct:.2f}% vs last close" if delta_pct is not None else None
             )
         else:
-            value_str = f"{last_disp:.2f} {sym}" if sym else f"{last_disp:.2f}"
-            cols_price[i].metric(label=f"{t} (Last)", value=value_str)
+            cols_price[i].metric(label=f"{t} (Last)", value=f"{last_disp:.2f}{unit}")
 
     if len(prices_display.columns) > len(cols_price):
         with st.expander("Voir tous les prix actuels"):
@@ -2045,20 +2039,21 @@ with tab1:
                     continue
                 last_close = prices[t].dropna().iloc[-1]
                 last_disp = s.iloc[-1]
-                cur = currency_map.get(t, "")
-                sym = currency_symbol(cur)
+                cur = ""
+                if t in fund.index:
+                    cur = str(fund.loc[t, "Devise"] or "")
+                unit = f" {cur}" if cur else ""
                 if t in rt_data:
                     rt_price, _ = rt_data[t]
                     delta_pct = (rt_price / last_close - 1.0) * 100 if last_close else None
-                    value_str = f"{rt_price:.2f} {sym}" if sym else f"{rt_price:.2f}"
+                    suffix = "(Polygon expérimental)" if st.session_state.get("lang", "fr") == "fr" else "(Polygon experimental)"
                     c.metric(
-                        label=f"{t} (Realtime)",
-                        value=value_str,
+                        label=f"{t} {suffix}",
+                        value=f"{rt_price:.2f}{unit}",
                         delta=f"{delta_pct:.2f}% vs close" if delta_pct is not None else None
                     )
                 else:
-                    value_str = f"{last_disp:.2f} {sym}" if sym else f"{last_disp:.2f}"
-                    c.metric(label=f"{t}", value=value_str)
+                    c.metric(label=f"{t}", value=f"{last_disp:.2f}{unit}")
 
     st.subheader(tr("graph_title"))
     graph_mode = st.radio(
@@ -2068,9 +2063,9 @@ with tab1:
     )
 
     if graph_mode == tr("graph_mode_base100"):
-        norm = prices_display / prices_display.iloc[0] * 100
+        norm = prices_display / prices_display.iloc[0] * 100.0
         if benchmark_series is not None and not benchmark_series.empty:
-            bm_norm = benchmark_series / benchmark_series.iloc[0] * 100
+            bm_norm = benchmark_series / benchmark_series.iloc[0] * 100.0
             norm = norm.join(bm_norm.rename("BENCHMARK"), how="outer")
         fig = px.line(norm, title=f"Performance normalisée (base 100) — {sector_label}")
         st.plotly_chart(fig, use_container_width=True)
@@ -2082,7 +2077,7 @@ with tab1:
         )
         price_one = prices_display[[selected]].dropna()
         log_scale = st.checkbox(tr("graph_log_scale"), value=False)
-        fig = px.line(price_one, title=f"{selected} — Prix réel sur la période ({history_period})")
+        fig = px.line(price_one, title=f"{selected} — Prix sur la période ({history_period})")
         fig.update_yaxes(title="Prix", type="log" if log_scale else "linear")
         fig.update_xaxes(title="Date")
         st.plotly_chart(fig, use_container_width=True)
@@ -2291,25 +2286,27 @@ with tab1:
         cols_to_use = [c for c in base_cols if c in df_base.columns]
 
     display_df = df_base.reindex(columns=cols_to_use)
-
-    # Market Cap en milliards dans le tableau "Comparaison complète"
-    if "Market Cap" in display_df.columns:
-        mc = pd.to_numeric(display_df["Market Cap"], errors="coerce")
-        display_df["Market Cap"] = mc / 1e9
-
     display_df.insert(
         0,
         "Source historique",
         [pretty_source_name(source_map.get(t, "none")) for t in display_df.index]
     )
 
+    # Market Cap en milliards dans le tableau
+    if "Market Cap" in display_df.columns:
+        mcap = pd.to_numeric(display_df["Market Cap"], errors="coerce")
+        display_df["Market Cap (Mds)"] = (mcap / 1e9).round(2)
+        display_df.drop(columns=["Market Cap"], inplace=True)
+
+    # Arrondir toutes les colonnes numériques à 2 décimales
+    for col_name in display_df.columns:
+        if pd.api.types.is_numeric_dtype(display_df[col_name]):
+            display_df[col_name] = display_df[col_name].round(2)
+
     perf_cols_subset = [c for c in ["Perf 1M", "Perf 3M", "Perf 6M", "Perf 1Y"] if c in display_df.columns]
 
     try:
-        # Limite les colonnes numériques à 2 décimales dans "Comparaison complète"
-        numeric_cols = display_df.select_dtypes(include=[np.number]).columns
-        styled = display_df.style.format("{:.2f}", subset=numeric_cols)
-        styled = styled.applymap(source_badge_style, subset=["Source historique"])
+        styled = display_df.style.applymap(source_badge_style, subset=["Source historique"])
         if perf_cols_subset:
             styled = styled.applymap(perf_color, subset=perf_cols_subset)
         if "Fantazia Score (%)" in display_df.columns:
@@ -2407,10 +2404,11 @@ with tab1:
         lines = [
             f"- Source historique choisie : **{price_source_mode}**",
             "- Fallback par action actif.",
-            f"- Realtime Polygon : **{'activé' if use_realtime else 'désactivé'}**",
+            f"- Polygon (expérimental) : **{'activé' if use_realtime else 'désactivé'}**",
             "- Perf 1M/3M/6M : approximation en séances.",
             "- Perf 1Y : calculée en calendrier (1 an réel).",
             f"- Période d'historique actuelle : **{history_period}**.",
+            "- Cache des prix : rafraîchi au max toutes les 15 minutes (Yahoo / autres sources).",
         ]
         if benchmark_ticker:
             lines.append(f"- Benchmark sélectionné : **{benchmark_ticker}**")
@@ -2638,19 +2636,17 @@ with tab4:
 
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     if info_row is not None:
-        dev = info_row.get("Devise", "")
-        sym = currency_symbol(dev)
-
         with col_f1:
             st.metric("Nom", info_row.get("Nom", ""))
             st.write(f"Secteur : {info_row.get('Secteur (API)', '')}")
             st.write(f"Industrie : {info_row.get('Industrie (API)', '')}")
         with col_f2:
-            st.metric("Pays / Devise", f"{info_row.get('Pays', '')} / {dev}")
+            st.metric("Pays / Devise", f"{info_row.get('Pays', '')} / {info_row.get('Devise', '')}")
             st.write(f"Exchange : {info_row.get('Exchange', '')}")
         with col_f3:
-            price_str = f"{last_price:.2f} {sym}" if sym else f"{last_price:.2f}"
-            st.metric("Prix actuel", price_str)
+            cur = info_row.get("Devise", "")
+            unit = f" {cur}" if cur else ""
+            st.metric("Prix actuel", f"{last_price:.2f}{unit}")
             if not pd.isna(perf_total):
                 st.metric("Perf sur la période", f"{perf_total:+.2f}%")
         with col_f4:
@@ -2666,8 +2662,6 @@ with tab4:
     if info_row is not None:
         low52 = info_row.get("52w Low", None)
         high52 = info_row.get("52w High", None)
-        dev = info_row.get("Devise", "")
-        sym = currency_symbol(dev)
         try:
             low52_val = float(low52)
             high52_val = float(high52)
@@ -2676,14 +2670,12 @@ with tab4:
         if low52_val is not None and high52_val is not None and high52_val > low52_val:
             ratio = (last_price - low52_val) / (high52_val - low52_val)
             ratio = max(0.0, min(1.0, ratio))
-            low_str = f"{low52_val:.2f} {sym}" if sym else f"{low52_val:.2f}"
-            high_str = f"{high52_val:.2f} {sym}" if sym else f"{high52_val:.2f}"
             st.markdown(
                 f"""
                 <div class="ff-52w">
                   <div class="ff-52w-labels">
-                    <span>52w Low : {low_str}</span>
-                    <span>52w High : {high_str}</span>
+                    <span>52w Low : {low52_val:.2f}</span>
+                    <span>52w High : {high52_val:.2f}</span>
                   </div>
                   <div class="ff-52w-bar">
                     <div class="ff-52w-track"></div>
@@ -2738,12 +2730,16 @@ with tab4:
 
     st.markdown(tr("stock_raw_data"))
     if info_row is not None:
-        # Arrondir les valeurs numériques à 2 décimales max dans "Données brutes (fondamentaux)"
-        info_row_display = info_row.copy()
-        for idx, val in info_row_display.items():
-            if isinstance(val, (int, float)) and not pd.isna(val):
-                info_row_display[idx] = round(float(val), 2)
-        st.dataframe(info_row_display.to_frame(name="Valeur"), use_container_width=True)
+        raw = info_row.copy()
+        for idx, val in raw.items():
+            if isinstance(val, (int, float, np.number)):
+                if pd.isna(val):
+                    continue
+                try:
+                    raw[idx] = round(float(val), 2)
+                except Exception:
+                    pass
+        st.dataframe(raw.to_frame(name="Valeur"), use_container_width=True)
 
     st.markdown("---")
     st.markdown(tr("stock_news_title"))
@@ -2787,20 +2783,19 @@ with tab4:
             story = []
             story.append(Paragraph(f"Fiche Fantazia Finance — {t_selected}", styles["Title"]))
             story.append(Spacer(1, 12))
-            dev = info_row.get("Devise", "") if info_row is not None else ""
-            sym = currency_symbol(dev)
             if info_row is not None:
                 story.append(Paragraph(f"Nom : {info_row.get('Nom', '')}", styles["Normal"]))
+
                 story.append(Paragraph(f"Secteur : {info_row.get('Secteur (API)', '')}", styles["Normal"]))
                 story.append(Paragraph(f"Industrie : {info_row.get('Industrie (API)', '')}", styles["Normal"]))
-                story.append(Paragraph(f"Pays / Devise : {info_row.get('Pays', '')} / {dev}", styles["Normal"]))
+                story.append(Paragraph(f"Pays / Devise : {info_row.get('Pays', '')} / {info_row.get('Devise', '')}", styles["Normal"]))
             story.append(Spacer(1, 12))
-            prix_str = f"{last_price:.2f} {sym}" if sym else f"{last_price:.2f}"
-            story.append(Paragraph(f"Prix actuel : {prix_str}", styles["Normal"]))
+            story.append(Paragraph(f"Prix actuel : {last_price:.2f}", styles["Normal"]))
             if not pd.isna(perf_total):
                 story.append(Paragraph(f"Perf sur la période : {perf_total:+.2f} %", styles["Normal"]))
             story.append(Spacer(1, 12))
             story.append(Paragraph("Principaux ratios :", styles["Heading3"]))
+
             if info_row is not None:
                 ratio_data = [
                     ["P/E (trailing)", str(info_row.get("P/E (trailing)", ""))],
@@ -2838,7 +2833,8 @@ with tab5:
         "- Benchmark = comparaison vs indice (surperf 1Y vs benchmark).\n"
         "- Corrélation = qui bouge avec qui (et dans quelle intensité).\n"
         "- News = via Finnhub (si FINNHUB_API_KEY présente).\n"
-        "- Historique = Yahoo / Twelve / Finnhub avec fallback par action."
+        "- Historique = Yahoo / Twelve / Finnhub avec fallback par action, cache rafraîchi toutes les 15 minutes.\n"
+        "- Polygon = tentative de prix live, mode expérimental (peut échouer ou ne rien ajouter selon la clé)."
     )
     st.divider()
     st.markdown(tr("help_api_status"))
@@ -2848,7 +2844,7 @@ with tab5:
     with c2:
         st.write("Finnhub :", "✅" if FINNHUB_API_KEY else "⚠️")
     with c3:
-        st.write("Polygon :", "✅" if POLYGON_API_KEY else "⚠️")
+        st.write("Polygon (expérimental) :", "✅" if POLYGON_API_KEY else "⚠️")
     st.divider()
     st.markdown("### " + tr("help_glossary"))
     lang = st.session_state.get("lang", "fr")

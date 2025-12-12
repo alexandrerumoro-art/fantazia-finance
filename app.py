@@ -8,17 +8,18 @@ from io import BytesIO
 from typing import List, Dict, Optional, Tuple, Callable
 
 import streamlit as st
+import requests
 import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import requests
 
-# --- Clés API (depuis Streamlit Secrets) ---
+# --- Clés API (depuis Streamlit Secrets / secrets.toml local) ---
 TWELVE_API_KEY = st.secrets.get("TWELVE_API_KEY", "")
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
 ALPHAVANTAGE_API_KEY = st.secrets.get("ALPHAVANTAGE_API_KEY", "")
 POLYGON_API_KEY = st.secrets.get("POLYGON_API_KEY", "")
+
 
 
 
@@ -3823,3 +3824,4 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
+

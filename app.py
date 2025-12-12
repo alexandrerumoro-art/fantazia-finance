@@ -1,12 +1,6 @@
-import streamlit as st
-
-TWELVE_API_KEY = st.secrets["TWELVE_API_KEY"]
-FINNHUB_API_KEY = st.secrets["FINNHUB_API_KEY"]
-ALPHAVANTAGE_API_KEY = st.secrets["ALPHAVANTAGE_API_KEY"]
-POLYGON_API_KEY = st.secrets["POLYGON_API_KEY"]
-import json
 import os
 import base64
+import json
 import hashlib
 import secrets
 import html
@@ -19,7 +13,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import requests
-import os, base64
+
 
 def seed_users_from_secrets(path="users.json"):
     # Si le fichier existe déjà et n'est pas vide, on ne touche pas
@@ -34,7 +28,15 @@ def seed_users_from_secrets(path="users.json"):
     with open(path, "wb") as f:
         f.write(data)
 
+
 seed_users_from_secrets()
+
+# Clés API (depuis secrets)
+TWELVE_API_KEY = st.secrets["TWELVE_API_KEY"]
+FINNHUB_API_KEY = st.secrets["FINNHUB_API_KEY"]
+ALPHAVANTAGE_API_KEY = st.secrets["ALPHAVANTAGE_API_KEY"]
+POLYGON_API_KEY = st.secrets["POLYGON_API_KEY"]
+
 
 # Optionnel : PDF export
 try:

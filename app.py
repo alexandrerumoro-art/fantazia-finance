@@ -1,41 +1,25 @@
-# ===================== BOOTSTRAP SECRETS + USERS (COPIE-COLLE) =====================
 import os
 import json
 import base64
-import streamlit as st
-import os, json
+import hashlib
+import secrets
+import html
+from io import BytesIO
 from typing import List, Dict, Optional, Tuple, Callable
 
-USERS_FILE = "users.json"
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import requests
 
-def ensure_json(path, default):
-    if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(default, f, ensure_ascii=False, indent=2)
+# --- Clés API (depuis Streamlit Secrets) ---
+TWELVE_API_KEY = st.secrets.get("TWELVE_API_KEY", "")
+FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
+ALPHAVANTAGE_API_KEY = st.secrets.get("ALPHAVANTAGE_API_KEY", "")
+POLYGON_API_KEY = st.secrets.get("POLYGON_API_KEY", "")
 
-ensure_json(USERS_FILE, {})
-
-USERS_FILE = "users.json"  # ton app utilise ce fichier
-
-    # Si fichier existe et contient déjà des users -> on ne touche pas
-    if os.path.exists(path) and os.path.getsize(path) > 2:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                existing = json.load(f)
-            if isinstance(existing, dict) and len(existing) > 0:
-                return
-        except Exception:
-            pass  # corrompu => on reseed
-
-def get_key(name: str) -> str:
-    """Récupère une clé depuis Streamlit Secrets (Cloud) / secrets.toml (local)."""
-    return str(st.secrets.get(name, "")).strip()
-
-# 2) Clés API (depuis Streamlit Secrets)
-TWELVE_API_KEY      = get_key("TWELVE_API_KEY")
-FINNHUB_API_KEY     = get_key("FINNHUB_API_KEY")
-ALPHAVANTAGE_API_KEY= get_key("ALPHAVANTAGE_API_KEY")
-POLYGON_API_KEY     = get_key("POLYGON_API_KEY")
 
 
 

@@ -761,23 +761,27 @@ SECTORS = {
 
 
 # =========================================================
-# CONFIG
+# CONFIG (fallback local uniquement, ne doit PAS écraser les secrets)
 # =========================================================
 def load_config() -> Dict:
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data if isinstance(data, dict) else {}
+            return data if isinstance(data, dict) else {}
         except Exception:
             return {}
     return {}
 
-
 CONFIG = load_config()
-TWELVE_API_KEY = str(CONFIG.get("TWELVE_API_KEY", "")).strip()
-FINNHUB_API_KEY = str(CONFIG.get("FINNHUB_API_KEY", "")).strip()
-POLYGON_API_KEY = str(CONFIG.get("POLYGON_API_KEY", "")).strip()
+
+# On garde en priorité les Secrets Streamlit.
+# Et on prend config.json seulement si la clé est vide.
+TWELVE_API_KEY = (TWELVE_API_KEY or str(CONFIG.get("TWELVE_API_KEY", "")).strip())
+FINNHUB_API_KEY = (FINNHUB_API_KEY or str(CONFIG.get("FINNHUB_API_KEY", "")).strip())
+POLYGON_API_KEY = (POLYGON_API_KEY or str(CONFIG.get("POLYGON_API_KEY", "")).strip())
+ALPHAVANTAGE_API_KEY = (ALPHAVANTAGE_API_KEY or str(CONFIG.get("ALPHAVANTAGE_API_KEY", "")).strip())
+
 
 
 # =========================================================
@@ -1548,6 +1552,13 @@ tickers = [t.upper() for t in tickers]
 if refresh_seconds and HAS_AUTOREFRESH:
     st_autorefresh(interval=refresh_seconds * 1000, key="auto_refresh_key")
 
+if st.sidebar.checkbox("DEBUG KEYS", value=False):
+    st.sidebar.write({
+        "TWELVE": bool(TWELVE_API_KEY),
+        "FINNHUB": bool(FINNHUB_API_KEY),
+        "ALPHAVANTAGE": bool(ALPHAVANTAGE_API_KEY),
+        "POLYGON": bool(POLYGON_API_KEY),
+    })
 
 # =========================================================
 # LOAD DATA
@@ -3824,4 +3835,3 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
-

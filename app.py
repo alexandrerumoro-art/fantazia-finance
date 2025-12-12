@@ -35,6 +35,24 @@ def seed_users_from_secrets(path="users.json"):
         f.write(data)
 
 seed_users_from_secrets()
+# --- DEBUG TEMPORAIRE (à enlever après) ---
+if st.sidebar.checkbox("DEBUG USERS", value=True):
+    st.sidebar.write("CWD:", os.getcwd())
+    st.sidebar.write("USERS_JSON_B64 length:", len(st.secrets.get("USERS_JSON_B64", "")))
+    st.sidebar.write("users.json exists:", os.path.exists("users.json"))
+    if os.path.exists("users.json"):
+        st.sidebar.write("users.json size:", os.path.getsize("users.json"))
+        try:
+            with open("users.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                st.sidebar.write("Nb users:", len(data))
+                st.sidebar.write("Usernames (max 20):", list(data.keys())[:20])
+            else:
+                st.sidebar.write("users.json type:", type(data))
+        except Exception as e:
+            st.sidebar.write("Error loading users.json:", e)
+# --- FIN DEBUG ---
 
 
 # Clés API (depuis secrets)

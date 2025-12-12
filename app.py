@@ -1,65 +1,71 @@
+# ===================== BOOTSTRAP SECRETS + USERS (COPIE-COLLE) =====================
 import os
-import base64
 import json
-import hashlib
-import secrets
-import html
-from io import BytesIO
-from typing import Dict, List, Tuple, Optional, Callable
-
+import base64
 import streamlit as st
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import requests
 
+USERS_FILE = "users.json"  # ton app utilise ce fichier
 
-def seed_users_from_secrets(path="users.json"):
-    # Si le fichier existe ET contient déjà des users, on ne touche pas
-    if os.path.exists(path):
+def _decode_b64_to_file(secret_name: str, path: str):
+    """Ecrit un fichier depuis un secret Base64 (si présent)."""
+    b64 = st.secrets.get(secret_name, "")
+    if not b64:
+        return False
+    data = base64.b64decode(str(b64).encode("utf-8"))
+    with open(path, "wb") as f:
+        f.write(data)
+    return True
+
+def seed_users_from_secrets(path: str = USERS_FILE):
+    """
+    Restaure users.json depuis USERS_JSON_B64 si:
+    - le fichier n'existe pas, OU
+    - il est vide/corrompu, OU
+    - il contient 0 user
+    """
+    # Si pas de backup dans secrets -> rien
+    if not st.secrets.get("USERS_JSON_B64", ""):
+        return
+
+    # Si fichier existe et contient déjà des users -> on ne touche pas
+    if os.path.exists(path) and os.path.getsize(path) > 2:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
-            if (isinstance(existing, dict) and len(existing) > 0) or (isinstance(existing, list) and len(existing) > 0):
+            if isinstance(existing, dict) and len(existing) > 0:
                 return
         except Exception:
-            pass  # vide/corrompu => on reseed
+            pass  # corrompu => on reseed
 
-    b64 = st.secrets.get("USERS_JSON_B64", "")
-    if not b64:
-        return
+    # Sinon on reseed depuis secrets
+    _decode_b64_to_file("USERS_JSON_B64", path)
 
-    data = base64.b64decode(b64.encode("utf-8"))
-    with open(path, "wb") as f:
-        f.write(data)
+def get_key(name: str) -> str:
+    """Récupère une clé depuis Streamlit Secrets (Cloud) / secrets.toml (local)."""
+    return str(st.secrets.get(name, "")).strip()
 
-seed_users_from_secrets()
-# --- DEBUG TEMPORAIRE (à enlever après) ---
-if st.sidebar.checkbox("DEBUG USERS", value=True):
-    st.sidebar.write("CWD:", os.getcwd())
-    st.sidebar.write("USERS_JSON_B64 length:", len(st.secrets.get("USERS_JSON_B64", "")))
-    st.sidebar.write("users.json exists:", os.path.exists("users.json"))
-    if os.path.exists("users.json"):
-        st.sidebar.write("users.json size:", os.path.getsize("users.json"))
-        try:
-            with open("users.json", "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                st.sidebar.write("Nb users:", len(data))
-                st.sidebar.write("Usernames (max 20):", list(data.keys())[:20])
-            else:
-                st.sidebar.write("users.json type:", type(data))
-        except Exception as e:
-            st.sidebar.write("Error loading users.json:", e)
-# --- FIN DEBUG ---
+# 1) On restaure les users AVANT que ton code login lise users.json
+seed_users_from_secrets(USERS_FILE)
 
+# 2) Clés API (depuis Streamlit Secrets)
+TWELVE_API_KEY      = get_key("TWELVE_API_KEY")
+FINNHUB_API_KEY     = get_key("FINNHUB_API_KEY")
+ALPHAVANTAGE_API_KEY= get_key("ALPHAVANTAGE_API_KEY")
+POLYGON_API_KEY     = get_key("POLYGON_API_KEY")
 
-# Clés API (depuis secrets)
-TWELVE_API_KEY = st.secrets["TWELVE_API_KEY"]
-FINNHUB_API_KEY = st.secrets["FINNHUB_API_KEY"]
-ALPHAVANTAGE_API_KEY = st.secrets["ALPHAVANTAGE_API_KEY"]
-POLYGON_API_KEY = st.secrets["POLYGON_API_KEY"]
+# 3) Debug simple (ne montre PAS les clés)
+if st.sidebar.checkbox("DEBUG KEYS", value=False):
+    st.sidebar.write("Keys OK?", {
+        "TWELVE": bool(TWELVE_API_KEY),
+        "FINNHUB": bool(FINNHUB_API_KEY),
+        "ALPHAVANTAGE": bool(ALPHAVANTAGE_API_KEY),
+        "POLYGON": bool(POLYGON_API_KEY),
+        "USERS_JSON_B64": bool(st.secrets.get("USERS_JSON_B64", "")),
+        "users.json exists": os.path.exists(USERS_FILE),
+        "users.json size": os.path.getsize(USERS_FILE) if os.path.exists(USERS_FILE) else 0,
+    })
+# =================== FIN BOOTSTRAP SECRETS + USERS (COPIE-COLLE) ===================
+
 
 
 # Optionnel : PDF export

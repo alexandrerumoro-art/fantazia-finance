@@ -16,9 +16,15 @@ import requests
 
 
 def seed_users_from_secrets(path="users.json"):
-    # Si le fichier existe déjà et n'est pas vide, on ne touche pas
-    if os.path.exists(path) and os.path.getsize(path) > 0:
-        return
+    # Si le fichier existe ET contient déjà des users, on ne touche pas
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            if (isinstance(existing, dict) and len(existing) > 0) or (isinstance(existing, list) and len(existing) > 0):
+                return
+        except Exception:
+            pass  # vide/corrompu => on reseed
 
     b64 = st.secrets.get("USERS_JSON_B64", "")
     if not b64:
@@ -28,8 +34,8 @@ def seed_users_from_secrets(path="users.json"):
     with open(path, "wb") as f:
         f.write(data)
 
-
 seed_users_from_secrets()
+
 
 # Clés API (depuis secrets)
 TWELVE_API_KEY = st.secrets["TWELVE_API_KEY"]

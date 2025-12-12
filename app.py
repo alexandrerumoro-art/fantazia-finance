@@ -1,3 +1,9 @@
+import streamlit as st
+
+TWELVE_API_KEY = st.secrets["TWELVE_API_KEY"]
+FINNHUB_API_KEY = st.secrets["FINNHUB_API_KEY"]
+ALPHAVANTAGE_API_KEY = st.secrets["ALPHAVANTAGE_API_KEY"]
+POLYGON_API_KEY = st.secrets["POLYGON_API_KEY"]
 import json
 import os
 import base64
@@ -28,7 +34,7 @@ except Exception:
 # PAGE CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="Fantazia Finance — Comparateur V3.7",
+    page_title="Fantazia Finance — Comparateur V3.9",
     layout="wide"
 )
 
@@ -42,7 +48,7 @@ if "lang" not in st.session_state:
 # =========================================================
 TRANSLATIONS = {
     "fr": {
-        "app_title": "📈 Comparateur d'actions par secteur, Fait par Fantazia Finance ( Alexandre) — V3.7",
+        "app_title": "📈 Comparateur d'actions par secteur, Fait par Fantazia Finance ( Alexandre) — V3.9",
         "app_caption": "Outil d'analyse personnel. Aucun conseil financier. Connecté : {user}.",
         "login_title": "🔐 Fantazia Finance — Connexion",
         "login_subtitle": "Crée un compte ou connecte-toi pour utiliser le terminal Fantazia Finance.",
@@ -76,7 +82,7 @@ TRANSLATIONS = {
         "sidebar_history": "Historique à charger",
         "sidebar_auto_adjust": "Prix ajustés (Yahoo)",
         "sidebar_source": "Source historique (fallback par action)",
-        "sidebar_rt": "Tenter prix live (Polygon, expérimental)",
+        "sidebar_rt": "Activer prix temps réel (Premium Polygon)",
         "sidebar_refresh": "Auto-refresh (optionnel)",
         "sidebar_no_tickers": "Aucun ticker sélectionné.",
         "sidebar_api_detected": "Clés API détectées : ",
@@ -189,7 +195,7 @@ TRANSLATIONS = {
         "stock_note_saved": "Note enregistrée pour {ticker}.",
         "stock_pdf_btn": "📄 Exporter la fiche en PDF",
         "stock_pdf_no_lib": "Export PDF indisponible (librairie `reportlab` non installée).",
-        "help_title": "ℹ️ Aide rapide — V3.7 (comptes, Fantazia Score %, alertes, news & assistant)",
+        "help_title": "ℹ️ Aide rapide — V3.9 (comptes, Fantazia Score %, alertes, news & assistant)",
         "help_api_status": "### Statut des clés API",
         "help_glossary": "📚 Glossaire rapide (termes financiers)",
         "assistant_title": "🤖 Assistant Fantazia (FAQ)",
@@ -197,7 +203,7 @@ TRANSLATIONS = {
         "assistant_input": "Ta question sur Fantazia Finance...",
     },
     "en": {
-        "app_title": "📈 Sector Stock Comparator, made by Fantazia Finance (Alexandre) — V3.7",
+        "app_title": "📈 Sector Stock Comparator, made by Fantazia Finance (Alexandre) — V3.9",
         "app_caption": "Personal analysis tool. No financial advice. Logged in as: {user}.",
         "login_title": "🔐 Fantazia Finance — Login",
         "login_subtitle": "Create an account or log in to use the Fantazia Finance terminal.",
@@ -231,7 +237,7 @@ TRANSLATIONS = {
         "sidebar_history": "History to load",
         "sidebar_auto_adjust": "Adjusted prices (Yahoo)",
         "sidebar_source": "Historical source (per-stock fallback)",
-        "sidebar_rt": "Try live prices (Polygon, experimental)",
+        "sidebar_rt": "Enable real-time prices (Premium Polygon)",
         "sidebar_refresh": "Auto-refresh (optional)",
         "sidebar_no_tickers": "No ticker selected.",
         "sidebar_api_detected": "API keys detected: ",
@@ -344,7 +350,7 @@ TRANSLATIONS = {
         "stock_note_saved": "Note saved for {ticker}.",
         "stock_pdf_btn": "📄 Export sheet to PDF",
         "stock_pdf_no_lib": "PDF export unavailable (`reportlab` library not installed).",
-        "help_title": "ℹ️ Quick help — V3.7 (accounts, Fantazia Score %, alerts, news & assistant)",
+        "help_title": "ℹ️ Quick help — V3.9 (accounts, Fantazia Score %, alerts, news & assistant)",
         "help_api_status": "### API keys status",
         "help_glossary": "📚 Quick glossary (financial terms)",
         "assistant_title": "🤖 Fantazia Assistant (FAQ)",
@@ -378,28 +384,45 @@ def apply_fantazia_theme():
 
     lines = [
         "<style>",
+        "/* ---- Boutons Fantazia ---- */",
         ".stButton>button {",
-        f"background: {accent};",
-        "color: #0a0a0a;",
-        "border: 0px solid transparent;",
-        "border-radius: 10px;",
-        "font-weight: 700;",
-        "padding: 0.45rem 0.9rem;",
-        "box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+        f"  background: {accent};",
+        "  color: #0a0a0a;",
+        "  border: 0px solid transparent;",
+        "  border-radius: 10px;",
+        "  font-weight: 700;",
+        "  padding: 0.45rem 0.9rem;",
+        "  box-shadow: 0 4px 12px rgba(0,0,0,0.15);",
+        "  transition: all 0.15s ease-out;",
         "}",
         ".stButton>button:hover {",
-        f"background: {accent_soft};",
-        "color: #000;",
+        f"  background: {accent_soft};",
+        "  color: #000;",
+        "  transform: translateY(-1px);",
+        "  box-shadow: 0 6px 18px rgba(0,0,0,0.20);",
         "}",
+
         "button[data-baseweb='tab'][aria-selected='true'] {",
-        f"border-bottom: 2px solid {accent};",
+        f"  border-bottom: 2px solid {accent};",
         "}",
+
+        "/* ---- Metrics (st.metric) ---- */",
         "[data-testid='stMetric'] {",
-        "padding: 10px 12px;",
-        "border-radius: 12px;",
-        "background: rgba(245,245,245,0.9);",
-        "border: 1px solid rgba(0,0,0,0.06);",
+        "  padding: 10px 12px;",
+        "  border-radius: 12px;",
+        "  background: rgba(245,245,245,0.9);",
+        "  border: 1px solid rgba(0,0,0,0.06);",
+        "  box-shadow: 0 2px 10px rgba(0,0,0,0.06);",
+        "  animation: ff-metric-in 0.25s ease-out;",
+        "  transform-origin: center;",
+        "  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;",
         "}",
+        "[data-testid='stMetric']:hover {",
+        "  transform: translateY(-1px) scale(1.01);",
+        "  box-shadow: 0 4px 16px rgba(0,0,0,0.10);",
+        "}",
+
+        "/* ---- Marquee alertes ---- */",
         ".ff-marquee {",
         "  width: 100%;",
         "  overflow: hidden;",
@@ -415,10 +438,8 @@ def apply_fantazia_theme():
         "  padding-left: 100%;",
         "  animation: ff-marquee-move 35s linear infinite;",
         "}",
-        "@keyframes ff-marquee-move {",
-        "  0% { transform: translateX(0%); }",
-        "  100% { transform: translateX(-100%); }",
-        "}",
+
+        "/* ---- 52w range ---- */",
         ".ff-52w {",
         "  margin-top: 8px;",
         "}",
@@ -451,6 +472,86 @@ def apply_fantazia_theme():
         "  transform: translateX(-50%);",
         "  box-shadow: 0 0 4px rgba(0,0,0,0.4);",
         "}",
+                "/* ---- Cadran analystes : échelle horizontale ---- */",
+        ".ff-analyst-card {",
+        "  max-width: 430px;",
+        "  background: #ffffff;",
+        "  border-radius: 16px;",
+        "  border: 1px solid rgba(15,23,42,0.06);",
+        "  box-shadow: 0 8px 24px rgba(15,23,42,0.06);",
+        "  padding: 12px 16px 10px;",
+        "  margin-top: 6px;",
+        "}",
+        ".ff-analyst-header {",
+        "  display: flex;",
+        "  align-items: center;",
+        "  justify-content: flex-start;",
+        "  margin-bottom: 6px;",
+        "}",
+        ".ff-analyst-main-label {",
+        "  font-weight: 700;",
+        "  font-size: 0.95rem;",
+        "}",
+        ".ff-analyst-scale {",
+        "  display: flex;",
+        "  gap: 4px;",
+        "  margin-bottom: 4px;",
+        "}",
+        ".ff-analyst-step {",
+        "  flex: 1;",
+        "  text-align: center;",
+        "  font-size: 0.75rem;",
+        "  padding: 4px 2px;",
+        "  border-radius: 999px;",
+        "  background: #f3f4f6;",
+        "  color: #6b7280;",
+        "  border: 1px solid transparent;",
+        "}",
+        ".ff-analyst-step-active {",
+        "  color: #ffffff;",
+        "  font-weight: 600;",
+        "  border-color: rgba(15,23,42,0.25);",
+        "}",
+        ".ff-analyst-step-0.ff-analyst-step-active {",
+        "  background: #b91c1c;",  # Fort vente → rouge
+        "}",
+        ".ff-analyst-step-1.ff-analyst-step-active {",
+        "  background: #f97316;",  # Vente → orange
+        "}",
+        ".ff-analyst-step-2.ff-analyst-step-active {",
+        "  background: #6b7280;",  # Neutre → gris
+        "}",
+        ".ff-analyst-step-3.ff-analyst-step-active {",
+        "  background: #22c55e;",  # Achat → vert
+        "}",
+        ".ff-analyst-step-4.ff-analyst-step-active {",
+        "  background: #16a34a;",  # Fort achat → vert foncé
+        "}",
+        ".ff-analyst-caption {",
+        "  margin-top: 4px;",
+        "  font-size: 0.8rem;",
+        "  color: #4b5563;",
+        "}",
+
+
+
+        "/* ---- Animations keyframes ---- */",
+        "@keyframes ff-marquee-move {",
+        "  0% { transform: translateX(0%); }",
+        "  100% { transform: translateX(-100%); }",
+        "}",
+        "@keyframes ff-metric-in {",
+        "  0% {",
+        "    opacity: 0;",
+        "    transform: translateY(6px) scale(0.99);",
+        "  }",
+        "  100% {",
+        "    opacity: 1;",
+        "    transform: translateY(0) scale(1.0);",
+        "  }",
+        "}",
+
+        "/* ---- Responsive ---- */",
         "@media (max-width: 768px) {",
         "  [data-testid='stMetric'] {",
         "      padding: 6px 8px;",
@@ -462,6 +563,9 @@ def apply_fantazia_theme():
         "</style>",
     ]
     st.markdown("\n".join(lines), unsafe_allow_html=True)
+
+
+
 
 
 apply_fantazia_theme()
@@ -632,7 +736,7 @@ CURRENT_USER = ensure_authenticated()
 
 
 # =========================================================
-# SECTORS
+# SECTORS (avec nouveaux presets 3.9)
 # =========================================================
 SECTORS = {
     "Mega Tech US": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA"],
@@ -640,6 +744,14 @@ SECTORS = {
     "Banques US": ["JPM", "BAC", "WFC", "C", "GS", "MS"],
     "Pétrole & Énergie": ["XOM", "CVX", "SHEL", "TTE", "BP"],
     "Luxe (Europe)": ["MC.PA", "RMS.PA", "KER.PA", "PRU.L", "BRBY.L"],
+
+    # Nouveaux presets 3.9 (validés)
+    "Automobile mondial": ["TSLA", "F", "GM", "STLA", "RNO.PA", "BMW.DE", "MBG.DE"],
+    "Divertissement / Streaming": ["NFLX", "DIS", "WBD", "RBLX", "SONY"],
+    "Pharma / Santé": ["JNJ", "PFE", "MRK", "LLY", "SAN.PA"],
+    "Consommation de base": ["PG", "KO", "PEP", "ULVR.L", "WMT"],
+    "Télécoms": ["VZ", "T", "ORAN.PA", "VOD.L"],
+    "Défense / Aérospatial": ["LMT", "NOC", "RTX", "BA", "AIR.PA"],
 }
 
 
@@ -816,6 +928,39 @@ def save_notes(user: str, notes: Dict[str, str]) -> None:
     with open(NOTES_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+# ---------------------------------------------------------
+# Prix + devise (pour affichage)
+# ---------------------------------------------------------
+def format_price_with_currency(ticker: str, price: float) -> str:
+    """
+    Retourne un prix formaté avec la devise si dispo dans le DataFrame 'fund'.
+    Exemple : 178.34 $ ou 52.10 €.
+    Si la devise est inconnue -> juste le prix avec 2 décimales.
+    """
+    try:
+        cur = None
+        # On essaye de lire la devise dans le DF 'fund' (global)
+        if "fund" in globals():
+            global fund
+            if isinstance(fund, pd.DataFrame) and ticker in fund.index:
+                cur = fund.loc[ticker].get("Devise", None)
+    except Exception:
+        cur = None
+
+    # Mapping simple pour les symboles les plus courants
+    symbol_map = {
+        "USD": "$",
+        "EUR": "€",
+        "GBP": "£",
+        "CHF": "CHF",
+        "JPY": "¥",
+    }
+
+    if cur:
+        symbol = symbol_map.get(str(cur).upper(), str(cur))
+        return f"{price:.2f} {symbol}"
+    else:
+        return f"{price:.2f}"
 
 # =========================================================
 # DISPLAY HELPERS
@@ -977,23 +1122,8 @@ def filter_period_df(df: pd.DataFrame, period: str) -> pd.DataFrame:
 # PRICE PROVIDERS
 # =========================================================
 def fetch_yfinance_single(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
-    """
-    Yahoo Finance :
-    - 1d / 5d : interval 5m (intraday)
-    - sinon : interval 1d
-    """
     try:
-        if period in ["1d", "5d"]:
-            interval = "5m"
-        else:
-            interval = "1d"
-        data = yf.download(
-            [ticker],
-            period=period,
-            interval=interval,
-            auto_adjust=auto_adjust,
-            progress=False
-        )
+        data = yf.download([ticker], period=period, auto_adjust=auto_adjust, progress=False)
         if data is None or data.empty:
             return pd.Series(dtype=float)
         close = data["Close"] if "Close" in data else data
@@ -1092,7 +1222,7 @@ def fetch_finnhub_single(ticker: str, period: str) -> pd.Series:
 
 
 # =========================================================
-# REALTIME POLYGON (EXPERIMENTAL)
+# REALTIME POLYGON
 # =========================================================
 def fetch_realtime_polygon_last(ticker: str) -> Optional[Tuple[float, pd.Timestamp]]:
     if not POLYGON_API_KEY:
@@ -1197,7 +1327,7 @@ def get_provider_chain(source_mode: str) -> List[Tuple[str, ProviderFn]]:
     ]
 
 
-@st.cache_data(ttl=900)  # <= données rafraîchies au max toutes les 15 min
+@st.cache_data
 def load_prices_per_ticker(
     tickers: List[str],
     period: str,
@@ -1236,7 +1366,7 @@ def load_prices_per_ticker(
 # =========================================================
 # BENCHMARK (Indice)
 # =========================================================
-@st.cache_data(ttl=900)
+@st.cache_data
 def fetch_benchmark_series(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
     if not ticker:
         return pd.Series(dtype=float)
@@ -1273,8 +1403,13 @@ def load_fundamentals(tickers: List[str]) -> pd.DataFrame:
             "52w High": info.get("fiftyTwoWeekHigh"),
             "52w Low": info.get("fiftyTwoWeekLow"),
             "Exchange": info.get("exchange"),
+            # === NOUVEAU : données analystes Yahoo ===
+            "Reco (brut)": info.get("recommendationKey"),
+            "Reco moyenne": info.get("recommendationMean"),
+            "Nb analystes": info.get("numberOfAnalystOpinions"),
         })
     return pd.DataFrame(rows).set_index("Ticker")
+
 
 
 # =========================================================
@@ -1641,7 +1776,7 @@ def faq_answer(question: str) -> str:
             "- les **alertes** (ruban + Alertes du jour),\n"
             "- le **simulateur de portefeuille**, \n"
             "- les **watchlists**, les **notes perso** et les **news suivies**, \n"
-            "- la 52w range, les sources de données (Yahoo, Twelve, Finnhub, Polygon expérimental).\n\n"
+            "- la 52w range, les sources de données (Yahoo, Twelve, Finnhub, Polygon).\n\n"
             "Pose ta question le plus clairement possible, par exemple :\n"
             "- \"Explique-moi le Fantazia Score personnalisé\"\n"
             "- \"Comment lire la corrélation ?\"\n"
@@ -1781,7 +1916,7 @@ def faq_answer(question: str) -> str:
             "- **alerts** (ribbon + Alerts of the day),\n"
             "- the **portfolio simulator**, \n"
             "- **watchlists**, **personal notes** and **followed news**, \n"
-            "- the 52w range, data sources (Yahoo, Twelve, Finnhub, experimental Polygon).\n\n"
+            "- the 52w range, data sources (Yahoo, Twelve, Finnhub, Polygon).\n\n"
             "Ask clearly, e.g.:\n"
             "- \"Explain the custom Fantazia Score\",\n"
             "- \"How to read correlation?\",\n"
@@ -1808,20 +1943,23 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # TAB 1 — DASHBOARD
 # =========================================================
 with tab1:
+    # Realtime best-effort
     rt_data: Dict[str, Tuple[float, pd.Timestamp]] = {}
     if use_realtime and POLYGON_API_KEY:
         rt_data = fetch_realtime_polygon_batch(list(prices.columns))
 
-    if st.button("🔄 Refresh prix temps réel (Polygon expérimental)"):
+    if st.button("🔄 Refresh prix (Polygon/Yahoo)"):
         if use_realtime and POLYGON_API_KEY:
             rt_data = fetch_realtime_polygon_batch(list(prices.columns))
 
+    # Prix utilisés pour tout le reste
     prices_display = prices.copy()
     if rt_data:
         for t, (p, _) in rt_data.items():
             if t in prices_display.columns and not prices_display[t].dropna().empty:
                 prices_display.loc[prices_display.index[-1], t] = p
 
+    # Derniers prix & variations journalières
     latest_prices: Dict[str, float] = {}
     daily_changes: Dict[str, float] = {}
     for t in prices_display.columns:
@@ -1834,6 +1972,7 @@ with tab1:
         else:
             daily_changes[t] = np.nan
 
+    # Alertes
     user_alerts = load_alerts(CURRENT_USER)
     triggered_alerts = []
 
@@ -1868,6 +2007,7 @@ with tab1:
         if desc:
             triggered_alerts.append({"ticker": ticker, "desc": desc})
 
+    # Ruban haut
     if triggered_alerts:
         messages = [
             f"[{a['ticker']}] {a['desc']}"
@@ -1888,6 +2028,7 @@ with tab1:
     else:
         st.caption(tr("alerts_ribbon_info"))
 
+    # Bloc Alertes du jour
     st.subheader(tr("alerts_of_day"))
     if triggered_alerts:
         for a in triggered_alerts:
@@ -1895,6 +2036,7 @@ with tab1:
     else:
         st.write(tr("alerts_none"))
 
+    # Configuration alertes
     with st.expander(tr("alerts_config_title")):
         st.caption(tr("alerts_config_caption"))
         if user_alerts:
@@ -1994,6 +2136,7 @@ with tab1:
 
     st.markdown("---")
 
+    # Sources historiques
     st.subheader(tr("sources_title"))
     src_df = pd.DataFrame(
         [{"Ticker": t, "Source historique": pretty_source_name(source_map.get(t, "none"))} for t in prices.columns]
@@ -2004,6 +2147,7 @@ with tab1:
     except Exception:
         st.dataframe(src_df, use_container_width=True)
 
+    # Prix actuels (avec devise)
     st.subheader(tr("prices_title"))
     cols_price = st.columns(min(4, len(prices_display.columns)))
     first_cols = list(prices_display.columns)[:len(cols_price)]
@@ -2011,23 +2155,24 @@ with tab1:
         s = prices_display[t].dropna()
         if s.empty:
             continue
-        last_close = prices[t].dropna().iloc[-1]
+        last_close_series = prices[t].dropna()
+        last_close = last_close_series.iloc[-1] if not last_close_series.empty else np.nan
         last_disp = s.iloc[-1]
-        cur = ""
-        if t in fund.index:
-            cur = str(fund.loc[t, "Devise"] or "")
-        unit = f" {cur}" if cur else ""
+        label = f"{t}"
         if t in rt_data:
             rt_price, _ = rt_data[t]
-            delta_pct = (rt_price / last_close - 1.0) * 100 if last_close else None
-            suffix = "(Polygon expérimental)" if st.session_state.get("lang", "fr") == "fr" else "(Polygon experimental)"
+            delta_pct = (rt_price / last_close - 1.0) * 100 if last_close not in (0, np.nan) else None
+            label = f"{t} (Polygon best effort)"
             cols_price[i].metric(
-                label=f"{t} {suffix}",
-                value=f"{rt_price:.2f}{unit}",
-                delta=f"{delta_pct:.2f}% vs last close" if delta_pct is not None else None
+                label=label,
+                value=format_price_with_currency(t, rt_price),
+                delta=f"{delta_pct:.2f}% vs close" if delta_pct is not None else None
             )
         else:
-            cols_price[i].metric(label=f"{t} (Last)", value=f"{last_disp:.2f}{unit}")
+            cols_price[i].metric(
+                label=f"{t} (Yahoo)",
+                value=format_price_with_currency(t, last_disp)
+            )
 
     if len(prices_display.columns) > len(cols_price):
         with st.expander("Voir tous les prix actuels"):
@@ -2037,85 +2182,127 @@ with tab1:
                 s = prices_display[t].dropna()
                 if s.empty:
                     continue
-                last_close = prices[t].dropna().iloc[-1]
+                last_close_series = prices[t].dropna()
+                last_close = last_close_series.iloc[-1] if not last_close_series.empty else np.nan
                 last_disp = s.iloc[-1]
-                cur = ""
-                if t in fund.index:
-                    cur = str(fund.loc[t, "Devise"] or "")
-                unit = f" {cur}" if cur else ""
                 if t in rt_data:
                     rt_price, _ = rt_data[t]
-                    delta_pct = (rt_price / last_close - 1.0) * 100 if last_close else None
-                    suffix = "(Polygon expérimental)" if st.session_state.get("lang", "fr") == "fr" else "(Polygon experimental)"
+                    delta_pct = (rt_price / last_close - 1.0) * 100 if last_close not in (0, np.nan) else None
                     c.metric(
-                        label=f"{t} {suffix}",
-                        value=f"{rt_price:.2f}{unit}",
+                        label=f"{t} (Polygon)",
+                        value=format_price_with_currency(t, rt_price),
                         delta=f"{delta_pct:.2f}% vs close" if delta_pct is not None else None
                     )
                 else:
-                    c.metric(label=f"{t}", value=f"{last_disp:.2f}{unit}")
+                    c.metric(
+                        label=f"{t} (Yahoo)",
+                        value=format_price_with_currency(t, last_disp)
+                    )
 
+        # Graphiques
     st.subheader(tr("graph_title"))
+
+    # Boutons rapides d'horizon d'affichage (sur l'historique déjà chargé)
+    view_range = st.radio(
+        "Horizon d'affichage (sur la période chargée)",
+        ["1M", "3M", "1Y"],
+        horizontal=True,
+        index=0
+    )
+
+    def filter_for_view(df: pd.DataFrame, view: str) -> pd.DataFrame:
+        mapping = {
+            "1M": "1mo",
+            "3M": "3mo",
+            "1Y": "1y",
+        }
+        per = mapping.get(view, None)
+        if per is None:
+            return df
+        return filter_period_df(df, per)
+
+    prices_for_graphs = filter_for_view(prices_display, view_range)
+
     graph_mode = st.radio(
         "",
         [tr("graph_mode_base100"), tr("graph_mode_price"), tr("graph_mode_spread")],
         horizontal=True
     )
 
-    if graph_mode == tr("graph_mode_base100"):
-        norm = prices_display / prices_display.iloc[0] * 100.0
-        if benchmark_series is not None and not benchmark_series.empty:
-            bm_norm = benchmark_series / benchmark_series.iloc[0] * 100.0
-            norm = norm.join(bm_norm.rename("BENCHMARK"), how="outer")
-        fig = px.line(norm, title=f"Performance normalisée (base 100) — {sector_label}")
-        st.plotly_chart(fig, use_container_width=True)
-    elif graph_mode == tr("graph_mode_price"):
-        selected = st.selectbox(
-            tr("graph_choose_stock"),
-            list(prices_display.columns),
-            key="price_graph_select"
-        )
-        price_one = prices_display[[selected]].dropna()
-        log_scale = st.checkbox(tr("graph_log_scale"), value=False)
-        fig = px.line(price_one, title=f"{selected} — Prix sur la période ({history_period})")
-        fig.update_yaxes(title="Prix", type="log" if log_scale else "linear")
-        fig.update_xaxes(title="Date")
-        st.plotly_chart(fig, use_container_width=True)
+    if prices_for_graphs.empty:
+        st.warning("Pas assez de données pour afficher les graphiques sur cet horizon.")
     else:
-        col_sp1, col_sp2 = st.columns(2)
-        with col_sp1:
-            t1 = st.selectbox("Action A (numérateur)", list(prices_display.columns), index=0)
-        with col_sp2:
-            t2 = st.selectbox(
-                "Action B (dénominateur)",
-                list(prices_display.columns),
-                index=min(1, len(prices_display.columns) - 1)
+        if graph_mode == tr("graph_mode_base100"):
+            # Base 100 par ticker : on prend le premier prix non-NaN de chaque série
+            def _base100(s: pd.Series) -> pd.Series:
+                s_clean = s.dropna()
+                if s_clean.empty:
+                    return s
+                return s / s_clean.iloc[0] * 100.0
+
+            norm = prices_for_graphs.apply(_base100)
+
+            # On ajoute le benchmark éventuel, en base 100 aussi
+            if benchmark_series is not None and not benchmark_series.empty:
+                bm_filtered = filter_for_view(benchmark_series.to_frame("BM"), view_range)["BM"]
+                bm_filtered = bm_filtered.dropna()
+                if not bm_filtered.empty:
+                    bm_norm = bm_filtered / bm_filtered.iloc[0] * 100.0
+                    norm = norm.join(bm_norm.rename("BENCHMARK"), how="outer")
+
+            fig = px.line(norm, title=f"Performance normalisée (base 100) — {sector_label}")
+            st.plotly_chart(fig, use_container_width=True)
+
+        elif graph_mode == tr("graph_mode_price"):
+            selected = st.selectbox(
+                tr("graph_choose_stock"),
+                list(prices_for_graphs.columns),
+                key="price_graph_select"
             )
-        if t1 == t2:
-            st.info(tr("graph_spread_info"))
+            price_one = prices_for_graphs[[selected]].dropna()
+            log_scale = st.checkbox(tr("graph_log_scale"), value=False)
+            fig = px.line(price_one, title=f"{selected} — Prix sur la période")
+            fig.update_yaxes(title="Prix", type="log" if log_scale else "linear")
+            fig.update_xaxes(title="Date")
+            st.plotly_chart(fig, use_container_width=True)
+
         else:
-            sub = prices_display[[t1, t2]].dropna(how="any")
-            if sub.empty:
-                st.warning("Pas assez de données pour ce spread.")
+            col_sp1, col_sp2 = st.columns(2)
+            with col_sp1:
+                t1 = st.selectbox("Action A (numérateur)", list(prices_for_graphs.columns), index=0)
+            with col_sp2:
+                t2 = st.selectbox(
+                    "Action B (dénominateur)",
+                    list(prices_for_graphs.columns),
+                    index=min(1, len(prices_for_graphs.columns) - 1)
+                )
+            if t1 == t2:
+                st.info(tr("graph_spread_info"))
             else:
-                base = sub.iloc[0]
-                norm_sp = sub / base * 100.0
-                spread_series = norm_sp[t1] - norm_sp[t2]
-                df_spread = pd.DataFrame({
-                    f"{t1} (base 100)": norm_sp[t1],
-                    f"{t2} (base 100)": norm_sp[t2],
-                    "Spread (A - B)": spread_series,
-                })
-                fig_sp = px.line(df_spread[["Spread (A - B)"]], title=f"Spread base 100 = {t1} - {t2}")
-                fig_sp.add_hline(y=0, line_dash="dash")
-                st.plotly_chart(fig_sp, use_container_width=True)
-                with st.expander("ℹ️ Spread"):
-                    st.markdown(tr("graph_spread_how").format(a=t1, b=t2))
+                sub = prices_for_graphs[[t1, t2]].dropna(how="any")
+                if sub.empty:
+                    st.warning("Pas assez de données pour ce spread.")
+                else:
+                    base = sub.iloc[0]
+                    norm_sp = sub / base * 100.0
+                    spread_series = norm_sp[t1] - norm_sp[t2]
+                    df_spread = pd.DataFrame({
+                        f"{t1} (base 100)": norm_sp[t1],
+                        f"{t2} (base 100)": norm_sp[t2],
+                        "Spread (A - B)": spread_series,
+                    })
+                    fig_sp = px.line(df_spread[["Spread (A - B)"]], title=f"Spread base 100 = {t1} - {t2}")
+                    fig_sp.add_hline(y=0, line_dash="dash")
+                    st.plotly_chart(fig_sp, use_container_width=True)
+                    with st.expander("ℹ️ Spread"):
+                        st.markdown(tr("graph_spread_how").format(a=t1, b=t2))
 
+
+    # Top classement
     st.subheader(tr("scores_top_title"))
-
     df_scores = ranked_all.copy()
 
+    # Score personnalisé
     with st.expander(tr("custom_score_title")):
         st.caption(tr("custom_score_info"))
         custom_enabled = st.checkbox(
@@ -2195,7 +2382,210 @@ with tab1:
                 value=f"{fscore:.1f} %",
                 delta=delta_txt
             )
+    # Top défensif / Top risqué
+    lang_ui = st.session_state.get("lang", "fr")
 
+    if lang_ui == "fr":
+        st.markdown("### 🛡️ Actions défensives / ⚡ Actions risquées")
+    else:
+        st.markdown("### 🛡️ Defensive stocks / ⚡ Risky stocks")
+
+    col_vol = "Vol annualisée" if "Vol annualisée" in df_scores.columns else None
+    col_dd = "Max Drawdown" if "Max Drawdown" in df_scores.columns else None
+
+    def format_line(ticker, row):
+        name = row.get("Nom", "")
+        vol = row.get("Vol annualisée", np.nan)
+        dd = row.get("Max Drawdown", np.nan)
+        p1y = row.get("Perf 1Y", np.nan)
+
+        parts = [f"**{ticker}**"]
+        if name:
+            parts.append(f"— {name}")
+        if not pd.isna(vol):
+            parts.append(f"· Vol : {vol*100:.1f} %")
+        if not pd.isna(dd):
+            parts.append(f"· DD : {dd*100:.1f} %")
+        if not pd.isna(p1y):
+            parts.append(f"· 1Y : {p1y*100:+.1f} %")
+        return " ".join(parts)
+
+    if col_vol or col_dd:
+        # Défensives : faible volatilité (et drawdown moins violent si possible)
+        df_def = df_scores.copy()
+        if col_vol:
+            df_def = df_def.dropna(subset=[col_vol]).sort_values(col_vol, ascending=True)
+        elif col_dd:
+            df_def = df_def.dropna(subset=[col_dd]).sort_values(col_dd, ascending=False)
+        top_def = df_def.head(3)
+
+        # Risquées : forte volatilité (ou drawdown très négatif)
+        df_risk = df_scores.copy()
+        if col_vol:
+            df_risk = df_risk.dropna(subset=[col_vol]).sort_values(col_vol, ascending=False)
+        elif col_dd:
+            df_risk = df_risk.dropna(subset=[col_dd]).sort_values(col_dd, ascending=True)
+        top_risk = df_risk.head(3)
+
+        c_def, c_risk = st.columns(2)
+
+        with c_def:
+            if lang_ui == "fr":
+                st.markdown("**🛡️ Plus défensives**")
+                if top_def.empty:
+                    st.write("Aucune donnée suffisante pour identifier les actions défensives.")
+                else:
+                    for t, row in top_def.iterrows():
+                        st.markdown("- " + format_line(t, row))
+                    st.caption(
+                        "Profil plus calme : volatilité plus faible et drawdown historiquement moins violent."
+                    )
+            else:
+                st.markdown("**🛡️ Most defensive**")
+                if top_def.empty:
+                    st.write("Not enough data to identify defensive stocks.")
+                else:
+                    for t, row in top_def.iterrows():
+                        st.markdown("- " + format_line(t, row))
+                    st.caption(
+                        "Calmer profile: lower volatility and historically softer drawdowns."
+                    )
+
+        with c_risk:
+            if lang_ui == "fr":
+                st.markdown("**⚡ Plus risquées**")
+                if top_risk.empty:
+                    st.write("Aucune donnée suffisante pour identifier les actions risquées.")
+                else:
+                    for t, row in top_risk.iterrows():
+                        st.markdown("- " + format_line(t, row))
+                    st.caption(
+                        "Profil plus spéculatif : volatilité plus élevée et drawdown plus profond."
+                    )
+            else:
+                st.markdown("**⚡ Riskiest**")
+                if top_risk.empty:
+                    st.write("Not enough data to identify risky stocks.")
+                else:
+                    for t, row in top_risk.iterrows():
+                        st.markdown("- " + format_line(t, row))
+                    st.caption(
+                        "More speculative profile: higher volatility and deeper drawdowns."
+                    )
+    else:
+        # Si jamais les colonnes de risque n'existent pas, on ne casse rien
+        if lang_ui == "fr":
+            st.caption("Pas assez de données de risque (volatilité / drawdown) pour classer les actions.")
+        else:
+            st.caption("Not enough risk data (volatility / drawdown) to rank the stocks.")
+
+    # Gagnant / perdant du jour dans le panier
+    lang_ui = st.session_state.get("lang", "fr")
+
+    if lang_ui == "fr":
+        st.markdown("### 🔍 Gagnant / perdant du jour")
+    else:
+        st.markdown("### 🔍 Biggest winner / loser today")
+
+    # daily_changes a été calculé plus haut dans le Dashboard
+    ch_series = pd.Series(daily_changes).dropna()
+
+    # On garde uniquement les tickers présents dans df_scores (sécurité)
+    if not df_scores.empty:
+        common_idx = df_scores.index.intersection(ch_series.index)
+        ch_series = ch_series.loc[common_idx]
+
+    if ch_series.empty:
+        if lang_ui == "fr":
+            st.caption("Pas assez de données intraday pour afficher le gagnant et le perdant du jour.")
+        else:
+            st.caption("Not enough intraday data to show today's winner and loser.")
+    else:
+        # Cas où il n'y a qu'une seule action avec variation du jour
+        if len(ch_series) == 1:
+            only_ticker = ch_series.index[0]
+            only_val = ch_series.iloc[0]
+            row = df_scores.loc[only_ticker] if only_ticker in df_scores.index else {}
+            name = row.get("Nom", "")
+            p1y = row.get("Perf 1Y", np.nan)
+
+            label = "🚀 Gagnant du jour" if lang_ui == "fr" else "🚀 Today's move"
+            if only_val < 0:
+                label = "🩸 Perdant du jour" if lang_ui == "fr" else "🩸 Today's move"
+
+            st.metric(
+                label=label,
+                value=only_ticker,
+                delta=f"{only_val:+.2f} %"
+            )
+
+            # Petit récap en dessous
+            parts = []
+            if name:
+                parts.append(name)
+            if not pd.isna(p1y):
+                if lang_ui == "fr":
+                    parts.append(f"Perf 1 an : {p1y*100:+.1f} %")
+                else:
+                    parts.append(f"1Y perf: {p1y*100:+.1f} %")
+            if parts:
+                st.caption(" · ".join(parts))
+        else:
+            # Plus gros gagnant / plus gros perdant
+            top_up_ticker = ch_series.idxmax()
+            top_up_val = ch_series.loc[top_up_ticker]
+
+            top_down_ticker = ch_series.idxmin()
+            top_down_val = ch_series.loc[top_down_ticker]
+
+            row_up = df_scores.loc[top_up_ticker] if top_up_ticker in df_scores.index else {}
+            row_down = df_scores.loc[top_down_ticker] if top_down_ticker in df_scores.index else {}
+
+            name_up = row_up.get("Nom", "")
+            p1y_up = row_up.get("Perf 1Y", np.nan)
+
+            name_down = row_down.get("Nom", "")
+            p1y_down = row_down.get("Perf 1Y", np.nan)
+
+            col_up, col_down = st.columns(2)
+
+            with col_up:
+                label_up = "🚀 Plus grosse hausse du jour" if lang_ui == "fr" else "🚀 Biggest gainer today"
+                st.metric(
+                    label=label_up,
+                    value=top_up_ticker,
+                    delta=f"{top_up_val:+.2f} %"
+                )
+                parts_up = []
+                if name_up:
+                    parts_up.append(name_up)
+                if not pd.isna(p1y_up):
+                    if lang_ui == "fr":
+                        parts_up.append(f"Perf 1 an : {p1y_up*100:+.1f} %")
+                    else:
+                        parts_up.append(f"1Y perf: {p1y_up*100:+.1f} %")
+                if parts_up:
+                    st.caption(" · ".join(parts_up))
+
+            with col_down:
+                label_down = "🩸 Plus grosse baisse du jour" if lang_ui == "fr" else "🩸 Biggest loser today"
+                st.metric(
+                    label=label_down,
+                    value=top_down_ticker,
+                    delta=f"{top_down_val:+.2f} %"
+                )
+                parts_down = []
+                if name_down:
+                    parts_down.append(name_down)
+                if not pd.isna(p1y_down):
+                    if lang_ui == "fr":
+                        parts_down.append(f"Perf 1 an : {p1y_down*100:+.1f} %")
+                    else:
+                        parts_down.append(f"1Y perf: {p1y_down*100:+.1f} %")
+                if parts_down:
+                    st.caption(" · ".join(parts_down))
+
+            # Comparaison complète
     st.subheader(tr("table_title"))
 
     with st.expander(tr("table_filters")):
@@ -2235,6 +2625,7 @@ with tab1:
 
     df_base = df_scores.copy()
 
+    # Filtres
     filter_col = score_col_current
     if filter_col in df_base.columns and min_fscore > 0:
         df_base = df_base[df_base[filter_col] >= min_fscore]
@@ -2261,7 +2652,7 @@ with tab1:
 
     base_cols = [
         "Nom", "Secteur (API)", "Industrie (API)", "Pays", "Devise",
-        "Market Cap",
+        "Market Cap (Mds)",
         "P/E (trailing)", "P/B",
         "ROE", "Marge nette", "Dette/Capitaux", "Div. Yield",
         "Perf 1M", "Perf 3M", "Perf 6M", "Perf 1Y",
@@ -2273,7 +2664,7 @@ with tab1:
     ]
 
     simple_cols = [
-        "Nom", "Pays", "Devise", "Market Cap",
+        "Nom", "Pays", "Devise", "Market Cap (Mds)",
         "Perf 1M", "Perf 3M", "Perf 1Y",
         "P/E (trailing)", "Div. Yield",
         "Fantazia Score (%)", "Fantazia Perso (%)",
@@ -2292,23 +2683,20 @@ with tab1:
         [pretty_source_name(source_map.get(t, "none")) for t in display_df.index]
     )
 
-    # Market Cap en milliards dans le tableau
-    if "Market Cap" in display_df.columns:
-        mcap = pd.to_numeric(display_df["Market Cap"], errors="coerce")
-        display_df["Market Cap (Mds)"] = (mcap / 1e9).round(2)
-        display_df.drop(columns=["Market Cap"], inplace=True)
-
-    # Arrondir toutes les colonnes numériques à 2 décimales
-    for col_name in display_df.columns:
-        if pd.api.types.is_numeric_dtype(display_df[col_name]):
-            display_df[col_name] = display_df[col_name].round(2)
+    # Colonnes numériques pour formatage
+    num_cols = display_df.select_dtypes(include=[np.number, "float64", "int64"]).columns
 
     perf_cols_subset = [c for c in ["Perf 1M", "Perf 3M", "Perf 6M", "Perf 1Y"] if c in display_df.columns]
 
     try:
-        styled = display_df.style.applymap(source_badge_style, subset=["Source historique"])
+        # 2 décimales pour toutes les colonnes numériques
+        styled = display_df.style.format("{:.2f}", subset=num_cols)
+        # Badge de la source
+        styled = styled.applymap(source_badge_style, subset=["Source historique"])
+        # Couleurs perf
         if perf_cols_subset:
             styled = styled.applymap(perf_color, subset=perf_cols_subset)
+        # Couleurs scores
         if "Fantazia Score (%)" in display_df.columns:
             styled = styled.applymap(perf_color, subset=["Fantazia Score (%)"])
         if "Fantazia Perso (%)" in display_df.columns:
@@ -2322,6 +2710,9 @@ with tab1:
         "Si le score perso est activé, les filtres utilisent la colonne personnalisée."
     )
 
+
+
+    # Heatmap
     st.subheader(tr("heatmap_title"))
     heat = df_base[["Perf 1M", "Perf 3M", "Perf 6M", "Perf 1Y"]].copy()
     heat = heat.apply(pd.to_numeric, errors="coerce")
@@ -2357,6 +2748,7 @@ with tab1:
     st.plotly_chart(fig2, use_container_width=True)
     st.caption(tr("heatmap_legend"))
 
+    # Corrélation
     st.subheader(tr("corr_title"))
     returns = prices_display.pct_change().dropna()
     if returns.shape[0] < 2:
@@ -2375,7 +2767,103 @@ with tab1:
         figc.update_coloraxes(colorbar_title="Corr")
         st.plotly_chart(figc, use_container_width=True)
         st.caption(tr("corr_caption"))
+        
+    # Résumé "coach" du panier
+    lang_ui = st.session_state.get("lang", "fr")
 
+    if not df_scores.empty:
+        n_stocks = len(df_scores)
+
+        # Score moyen
+        if score_col_current in df_scores.columns:
+            score_mean = df_scores[score_col_current].mean()
+        else:
+            score_mean = np.nan
+
+        # Perf 1Y moyenne
+        if "Perf 1Y" in df_scores.columns:
+            perf1y_mean = df_scores["Perf 1Y"].mean()
+            nb_neg1y = int((df_scores["Perf 1Y"] < 0).sum())
+        else:
+            perf1y_mean = np.nan
+            nb_neg1y = 0
+
+        # Volatilité & drawdown moyens
+        if "Vol annualisée" in df_scores.columns:
+            vol_mean = df_scores["Vol annualisée"].mean()
+        else:
+            vol_mean = np.nan
+
+        if "Max Drawdown" in df_scores.columns:
+            dd_mean = df_scores["Max Drawdown"].mean()
+        else:
+            dd_mean = np.nan
+
+        # Nombre d'actions avec bon score
+        if score_col_current in df_scores.columns:
+            nb_high = int((df_scores[score_col_current] >= 80).sum())
+        else:
+            nb_high = 0
+
+        # Surperf moyenne vs benchmark (si dispo)
+        if "Surperf 1Y vs BM (pts)" in df_scores.columns:
+            surperf_mean = df_scores["Surperf 1Y vs BM (pts)"].mean()
+        else:
+            surperf_mean = np.nan
+
+        # On formate les nombres proprement
+        def fmt_pct(x):
+            return f"{x*100:.1f} %" if not pd.isna(x) else "n/d"
+
+        def fmt_pts(x):
+            sign = "+" if x >= 0 else ""
+            return f"{sign}{x:.1f} pts" if not pd.isna(x) else "n/d"
+
+        if lang_ui == "fr":
+            st.markdown("### 🧩 Résumé du panier")
+
+            lignes = [
+                f"- **Nombre d'actions dans le panier** : {n_stocks}",
+            ]
+            if not pd.isna(score_mean):
+                lignes.append(f"- **Fantazia Score moyen** : {score_mean:.1f} %")
+            if not pd.isna(perf1y_mean):
+                lignes.append(f"- **Performance moyenne 1 an** : {perf1y_mean*100:+.1f} %")
+            if not pd.isna(vol_mean):
+                lignes.append(f"- **Volatilité annualisée moyenne** : {vol_mean*100:.1f} %")
+            if not pd.isna(dd_mean):
+                lignes.append(f"- **Max drawdown moyen** : {dd_mean*100:.1f} %")
+            lignes.append(f"- **Actions avec Fantazia ≥ 80 %** : {nb_high}")
+            if "Perf 1Y" in df_scores.columns:
+                lignes.append(f"- **Actions avec performance 1 an négative** : {nb_neg1y}")
+            if not pd.isna(surperf_mean):
+                lignes.append(f"- **Surperformance 1 an moyenne vs benchmark** : {fmt_pts(surperf_mean)}")
+
+            st.markdown("\n".join(lignes))
+        else:
+            st.markdown("### 🧩 Basket summary")
+
+            lines_en = [
+                f"- **Number of stocks in basket**: {n_stocks}",
+            ]
+            if not pd.isna(score_mean):
+                lines_en.append(f"- **Average Fantazia Score**: {score_mean:.1f} %")
+            if not pd.isna(perf1y_mean):
+                lines_en.append(f"- **Average 1Y performance**: {perf1y_mean*100:+.1f} %")
+            if not pd.isna(vol_mean):
+                lines_en.append(f"- **Average annualized volatility**: {vol_mean*100:.1f} %")
+            if not pd.isna(dd_mean):
+                lines_en.append(f"- **Average max drawdown**: {dd_mean*100:.1f} %")
+            lines_en.append(f"- **Stocks with Fantazia ≥ 80%**: {nb_high}")
+            if "Perf 1Y" in df_scores.columns:
+                lines_en.append(f"- **Stocks with negative 1Y performance**: {nb_neg1y}")
+            if not pd.isna(surperf_mean):
+                lines_en.append(f"- **Average 1Y outperformance vs benchmark**: {fmt_pts(surperf_mean)}")
+
+            st.markdown("\n".join(lines_en))
+
+
+    # Export CSV (table arrondie)
     csv = display_df.to_csv().encode("utf-8")
     st.download_button(
         tr("export_csv"),
@@ -2384,6 +2872,7 @@ with tab1:
         mime="text/csv"
     )
 
+    # Détails score
     with st.expander(tr("score_details_title")):
         st.markdown(
             "### Comment lire le Fantazia Score (%)\n\n"
@@ -2400,20 +2889,21 @@ with tab1:
             "tu modifies la manière dont ces 4 blocs contribuent au score final."
         )
 
+    # Notes techniques
     with st.expander(tr("tech_notes_title")):
         lines = [
             f"- Source historique choisie : **{price_source_mode}**",
             "- Fallback par action actif.",
-            f"- Polygon (expérimental) : **{'activé' if use_realtime else 'désactivé'}**",
+            f"- Realtime Polygon (best effort) : **{'activé' if use_realtime else 'désactivé'}**",
             "- Perf 1M/3M/6M : approximation en séances.",
             "- Perf 1Y : calculée en calendrier (1 an réel).",
             f"- Période d'historique actuelle : **{history_period}**.",
-            "- Cache des prix : rafraîchi au max toutes les 15 minutes (Yahoo / autres sources).",
         ]
         if benchmark_ticker:
             lines.append(f"- Benchmark sélectionné : **{benchmark_ticker}**")
         st.markdown("\n".join(lines))
 
+    # News suivies
     st.markdown("---")
     st.subheader(tr("mynews_title"))
     if not FINNHUB_API_KEY:
@@ -2512,6 +3002,77 @@ with tab2:
             file_name=f"watchlists_{CURRENT_USER}.json",
             mime="application/json"
         )
+    # ------------------------------------------------------
+    # Centrale des notes / Notes hub
+    # ------------------------------------------------------
+    st.markdown("---")
+    lang_ui = st.session_state.get("lang", "fr")
+    title_notes = "📝 Centrale des notes" if lang_ui == "fr" else "📝 Notes hub"
+    st.subheader(title_notes)
+
+    notes_user = load_notes(CURRENT_USER)
+    watchlists_all = load_watchlists(CURRENT_USER)
+
+    if not notes_user:
+        msg = (
+            "Tu n'as encore écrit aucune note personnelle sur tes actions."
+            if lang_ui == "fr"
+            else "You haven't written any personal notes on your stocks yet."
+        )
+        st.info(msg)
+    else:
+        # Construire un tableau : Ticker / Watchlists / Note
+        rows = []
+        for t, note in notes_user.items():
+            wl_for_t = []
+            for wl_name, wl_tickers in watchlists_all.items():
+                if t in wl_tickers:
+                    wl_for_t.append(wl_name)
+            rows.append({
+                "Ticker": t,
+                "Watchlists": ", ".join(wl_for_t) if wl_for_t else ("(aucune)" if lang_ui == "fr" else "(none)"),
+                "Note": note,
+            })
+
+        df_notes = pd.DataFrame(rows)
+        if not df_notes.empty:
+            df_notes = df_notes.sort_values("Ticker")
+
+        st.dataframe(df_notes, use_container_width=True)
+
+        # Édition centralisée d'une note
+        if lang_ui == "fr":
+            st.markdown("### Modifier une note depuis la centrale")
+            label_select = "Choisis un ticker"
+            label_area = "Note pour {ticker}"
+            label_button = "💾 Enregistrer la note"
+            msg_saved = "Note mise à jour pour {ticker}."
+        else:
+            st.markdown("### Edit a note from the hub")
+            label_select = "Choose a ticker"
+            label_area = "Note for {ticker}"
+            label_button = "💾 Save note"
+            msg_saved = "Note updated for {ticker}."
+
+        tickers_with_notes = sorted(notes_user.keys())
+        selected_t = st.selectbox(
+            label_select,
+            tickers_with_notes,
+            key="notes_central_ticker_select"
+        )
+
+        current_note = notes_user.get(selected_t, "")
+        new_note_text = st.text_area(
+            label_area.format(ticker=selected_t),
+            value=current_note,
+            height=150,
+            key="notes_central_textarea"
+        )
+
+        if st.button(label_button, key="notes_central_save_button"):
+            notes_user[selected_t] = new_note_text
+            save_notes(CURRENT_USER, notes_user)
+            st.success(msg_saved.format(ticker=selected_t))
 
 
 # =========================================================
@@ -2562,12 +3123,12 @@ with tab3:
                     weights[t] = raw_vals[t] / total_input
 
         start_prices = prices.iloc[0]
-        last_prices = prices_display.iloc[-1]
+        last_prices_sim = prices_display.iloc[-1]
         sim_rows = []
         total_value = 0.0
         for t in tick_list:
             p0 = start_prices.get(t, np.nan)
-            p1 = last_prices.get(t, np.nan)
+            p1 = last_prices_sim.get(t, np.nan)
             w = weights.get(t, 0.0)
             if pd.isna(p0) or pd.isna(p1) or p0 <= 0:
                 shares = 0.0
@@ -2599,7 +3160,7 @@ with tab3:
         with col_s3:
             st.metric(tr("sim_global_perf"), f"{pl_pct:+.2f} %")
         st.markdown("### " + tr("sim_detail"))
-        st.dataframe(sim_df, use_container_width=True)
+        st.dataframe(sim_df.round(2), use_container_width=True)
 
 
 # =========================================================
@@ -2615,10 +3176,17 @@ with tab4:
     )
 
     info_row = fund.loc[t_selected] if t_selected in fund.index else None
-    last_price = prices_display[t_selected].dropna().iloc[-1]
-    start_price = prices_display[t_selected].dropna().iloc[0]
-    perf_total = (last_price / start_price - 1.0) * 100.0 if start_price > 0 else np.nan
+    s_disp = prices_display[t_selected].dropna()
+    if s_disp.empty:
+        last_price = np.nan
+        start_price = np.nan
+        perf_total = np.nan
+    else:
+        last_price = s_disp.iloc[-1]
+        start_price = s_disp.iloc[0]
+        perf_total = (last_price / start_price - 1.0) * 100.0 if start_price > 0 else np.nan
 
+    # Abonnement news
     current_subs = load_news_subscriptions(CURRENT_USER)
     already_subscribed = t_selected in current_subs
     sub_checkbox = st.checkbox(
@@ -2633,7 +3201,9 @@ with tab4:
         current_subs = [x for x in current_subs if x != t_selected]
         save_news_subscriptions(CURRENT_USER, current_subs)
         st.info(tr("stock_follow_removed").format(ticker=t_selected))
+    
 
+    # Header fiche action
     col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     if info_row is not None:
         with col_f1:
@@ -2644,9 +3214,7 @@ with tab4:
             st.metric("Pays / Devise", f"{info_row.get('Pays', '')} / {info_row.get('Devise', '')}")
             st.write(f"Exchange : {info_row.get('Exchange', '')}")
         with col_f3:
-            cur = info_row.get("Devise", "")
-            unit = f" {cur}" if cur else ""
-            st.metric("Prix actuel", f"{last_price:.2f}{unit}")
+            st.metric("Prix actuel", format_price_with_currency(t_selected, last_price))
             if not pd.isna(perf_total):
                 st.metric("Perf sur la période", f"{perf_total:+.2f}%")
         with col_f4:
@@ -2658,7 +3226,7 @@ with tab4:
             st.write(f"Dette/Capitaux : {info_row.get('Dette/Capitaux', 'n/a')}")
             st.write(f"Div. Yield : {info_row.get('Div. Yield', 'n/a')}")
 
-    # 52w range
+        # 52w range
     if info_row is not None:
         low52 = info_row.get("52w Low", None)
         high52 = info_row.get("52w High", None)
@@ -2667,7 +3235,7 @@ with tab4:
             high52_val = float(high52)
         except Exception:
             low52_val = high52_val = None
-        if low52_val is not None and high52_val is not None and high52_val > low52_val:
+        if low52_val is not None and high52_val is not None and high52_val > low52_val and not pd.isna(last_price):
             ratio = (last_price - low52_val) / (high52_val - low52_val)
             ratio = max(0.0, min(1.0, ratio))
             st.markdown(
@@ -2686,16 +3254,116 @@ with tab4:
                 unsafe_allow_html=True
             )
 
+    # Dossier personnel Fantazia pour ce ticker
+    lang_ui = st.session_state.get("lang", "fr")
+    if lang_ui == "fr":
+        st.markdown("### 📁 Dossier Fantazia pour cette action")
+    else:
+        st.markdown("### 📁 Fantazia file for this stock")
+
+    # Données perso : watchlists, notes, news, alertes
+    wl_user = load_watchlists(CURRENT_USER)
+    notes_user = load_notes(CURRENT_USER)
+    alerts_user = load_alerts(CURRENT_USER)
+    subs_user = load_news_subscriptions(CURRENT_USER)
+
+    t_upper = t_selected.upper()
+
+    # Watchlists contenant ce ticker
+    wl_for_t = []
+    for wl_name, wl_tickers in wl_user.items():
+        if t_upper in [str(x).upper() for x in wl_tickers]:
+            wl_for_t.append(wl_name)
+
+    has_note = bool(notes_user.get(t_upper, "").strip())
+    is_subscribed = t_upper in [str(x).upper() for x in subs_user]
+    n_alerts_t = sum(
+        1
+        for a in alerts_user
+        if str(a.get("ticker", "")).upper() == t_upper
+    )
+
+    col_d1, col_d2, col_d3 = st.columns(3)
+
+    # Colonne 1 : Watchlists
+    with col_d1:
+        if lang_ui == "fr":
+            st.markdown("**⭐ Watchlists**")
+            if wl_for_t:
+                st.write("Présente dans :")
+                for name in wl_for_t:
+                    st.markdown(f"- `{name}`")
+            else:
+                st.write("Cette action n'est dans **aucune** de tes watchlists.")
+        else:
+            st.markdown("**⭐ Watchlists**")
+            if wl_for_t:
+                st.write("Included in:")
+                for name in wl_for_t:
+                    st.markdown(f"- `{name}`")
+            else:
+                st.write("This stock is in **none** of your watchlists.")
+
+    # Colonne 2 : Note perso + suivi news
+    with col_d2:
+        if lang_ui == "fr":
+            st.markdown("**📝 Note personnelle**")
+            if has_note:
+                st.write("✅ Une note existe pour cette action.")
+            else:
+                st.write("❌ Aucune note enregistrée pour l'instant.")
+            st.markdown("**📰 News suivies**")
+            if is_subscribed:
+                st.write("✅ Tu suis les news de ce ticker.")
+            else:
+                st.write("❌ Tu ne suis pas encore les news de ce ticker.")
+        else:
+            st.markdown("**📝 Personal note**")
+            if has_note:
+                st.write("✅ A note exists for this stock.")
+            else:
+                st.write("❌ No note saved yet.")
+            st.markdown("**📰 Followed news**")
+            if is_subscribed:
+                st.write("✅ You follow this ticker's news.")
+            else:
+                st.write("❌ You don't follow this ticker's news yet.")
+
+    # Colonne 3 : Alertes
+    with col_d3:
+        if lang_ui == "fr":
+            st.markdown("**🔔 Alertes actives**")
+            if n_alerts_t > 0:
+                st.write(f"✅ {n_alerts_t} alerte(s) configurée(s) sur cette action.")
+                st.caption(
+                    "Tu peux les gérer dans le Dashboard, section **Alertes**."
+                )
+            else:
+                st.write("❌ Aucune alerte configurée sur cette action.")
+        else:
+            st.markdown("**🔔 Active alerts**")
+            if n_alerts_t > 0:
+                st.write(f"✅ {n_alerts_t} alert(s) configured on this stock.")
+                st.caption(
+                    "You can manage them in the Dashboard, **Alerts** section."
+                )
+            else:
+                st.write("❌ No alert configured on this stock.")
+
     st.markdown("---")
 
+    # Graphiques fiche
     col_g1, col_g2 = st.columns(2)
     with col_g1:
         st.markdown(tr("stock_price_history"))
         s_price = prices_display[t_selected].dropna()
-        figp = px.line(s_price, title=f"{t_selected} — Prix sur la période ({history_period})")
-        figp.update_yaxes(title="Prix")
-        figp.update_xaxes(title="Date")
-        st.plotly_chart(figp, use_container_width=True)
+        if s_price.empty:
+            st.info("Pas assez de données pour afficher le prix historique.")
+        else:
+            figp = px.line(s_price, title=f"{t_selected} — Prix sur la période ({history_period})")
+            figp.update_yaxes(title="Prix")
+            figp.update_xaxes(title="Date")
+            st.plotly_chart(figp, use_container_width=True)
 
     with col_g2:
         st.markdown(tr("stock_pe_history"))
@@ -2704,13 +3372,18 @@ with tab4:
             st.info(tr("stock_pe_unavailable"))
         else:
             s_price2 = prices_display[t_selected].dropna()
-            pe_series = s_price2 / eps
-            pe_series.name = "P/E approx"
-            figpe = px.line(pe_series, title=f"{t_selected} — P/E recalculé avec EPS actuel (approximation)")
-            figpe.update_yaxes(title="P/E approx")
-            figpe.update_xaxes(title="Date")
-            st.plotly_chart(figpe, use_container_width=True)
-            st.caption(tr("stock_pe_caption"))
+            if s_price2.empty:
+                st.info(tr("stock_pe_unavailable"))
+            else:
+                pe_series = s_price2 / eps
+                pe_series.name = "P/E approx"
+                figpe = px.line(pe_series, title=f"{t_selected} — P/E recalculé avec EPS actuel (approximation)")
+                figpe.update_yaxes(title="P/E approx")
+                figpe.update_xaxes(title="Date")
+                st.plotly_chart(figpe, use_container_width=True)
+                st.caption(tr("stock_pe_caption"))
+
+    # ⚠️ Décomposition Fantazia SUPPRIMÉE (comme demandé) ⚠️
 
     # Notes perso
     st.markdown("---")
@@ -2721,25 +3394,223 @@ with tab4:
         value=current_note,
         height=120
     )
-    if st.button("💾 " + (tr("stock_note_label").split(" ")[0] if st.session_state["lang"] == "fr" else "Save note")):
+    if st.button("💾 Enregistrer la note"):
         notes_user[t_selected.upper()] = new_note
         save_notes(CURRENT_USER, notes_user)
         st.success(tr("stock_note_saved").format(ticker=t_selected))
 
-    st.markdown("---")
+        st.markdown("---")
 
-    st.markdown(tr("stock_raw_data"))
-    if info_row is not None:
-        raw = info_row.copy()
-        for idx, val in raw.items():
-            if isinstance(val, (int, float, np.number)):
-                if pd.isna(val):
-                    continue
-                try:
-                    raw[idx] = round(float(val), 2)
-                except Exception:
-                    pass
-        st.dataframe(raw.to_frame(name="Valeur"), use_container_width=True)
+       # Sentiment des analystes / Analyst sentiment
+    lang_ui = st.session_state.get("lang", "fr")
+    title_sent = "Sentiment des analystes" if lang_ui == "fr" else "Analyst sentiment"
+    st.markdown("### " + title_sent)
+
+    # On récupère tout d'un coup via yfinance
+    reco_key = None
+    reco_mean = None
+    reco_n = None
+    target_mean = None
+    target_high = None
+    target_low = None
+
+    try:
+        info_full = yf.Ticker(t_selected).info
+        # Recos
+        reco_key = info_full.get("recommendationKey")
+        reco_mean = info_full.get("recommendationMean")
+        reco_n = info_full.get("numberOfAnalystOpinions")
+        # Objectifs de cours
+        target_mean = info_full.get("targetMeanPrice")
+        target_high = info_full.get("targetHighPrice")
+        target_low = info_full.get("targetLowPrice")
+    except Exception:
+        pass
+
+    col_sent, col_target = st.columns([2, 1])
+
+
+    # --------- Colonne gauche : cadran sentiment ---------
+    with col_sent:
+        if reco_key in [None, "", "none", "na"] or pd.isna(reco_key):
+            txt_no = (
+                "Pas de données d'analystes disponibles pour ce titre."
+                if lang_ui == "fr"
+                else "No analyst data available for this stock."
+            )
+            st.info(txt_no)
+        else:
+            key = str(reco_key).lower()
+            mapping = {
+                "strong_buy": ("Fort achat", "Strong Buy", 1.0),
+                "buy": ("Achat", "Buy", 0.5),
+                "hold": ("Neutre", "Hold", 0.0),
+                "sell": ("Vente", "Sell", -0.5),
+                "strong_sell": ("Fort vente", "Strong Sell", -1.0),
+            }
+            label_fr, label_en, score = mapping.get(key, ("Neutre", "Hold", 0.0))
+            label = label_fr if lang_ui == "fr" else label_en
+
+            # Angle de l'aiguille entre -80° (forte vente) et +80° (fort achat)
+            angle = float(score) * 80.0
+            # Score 0–100 pour affichage textuel
+            score_pct = (score + 1.0) / 2.0 * 100.0
+
+            extra = []
+            if isinstance(reco_mean, (int, float, np.number)) and not pd.isna(reco_mean):
+                if lang_ui == "fr":
+                    extra.append(
+                        f"Note moyenne Yahoo Finance : {reco_mean:.2f} (1 = Fort achat, 5 = Fort vente)."
+                    )
+                else:
+                    extra.append(
+                        f"Yahoo Finance average rating: {reco_mean:.2f} (1 = Strong buy, 5 = Strong sell)."
+                    )
+            if isinstance(reco_n, (int, float, np.number)) and not pd.isna(reco_n) and reco_n > 0:
+                if lang_ui == "fr":
+                    extra.append(f"Basé sur {int(reco_n)} analystes.")
+                else:
+                    extra.append(f"Based on {int(reco_n)} analysts.")
+
+                        # On transforme la reco en un cran sur l'échelle 5 niveaux
+            order_keys = ["strong_sell", "sell", "hold", "buy", "strong_buy"]
+            labels_fr_full = ["Fort vente", "Vente", "Neutre", "Achat", "Fort achat"]
+            labels_en_full = ["Strong sell", "Sell", "Hold", "Buy", "Strong buy"]
+            labels_full = labels_fr_full if lang_ui == "fr" else labels_en_full
+
+            try:
+                active_idx = order_keys.index(key)
+            except ValueError:
+                active_idx = 2  # par défaut : Neutre
+
+            steps_html = ""
+            for i, txt in enumerate(labels_full):
+                base_classes = f"ff-analyst-step ff-analyst-step-{i}"
+                if i == active_idx:
+                    base_classes += " ff-analyst-step-active"
+                steps_html += f'<div class="{base_classes}">{html.escape(txt)}</div>'
+
+            html_block = f"""
+            <div class="ff-analyst-card">
+              <div class="ff-analyst-header">
+                <div class="ff-analyst-main-label">{html.escape(label)}</div>
+              </div>
+              <div class="ff-analyst-scale">
+                {steps_html}
+              </div>
+              <div class="ff-analyst-caption">
+                {'<br>'.join(html.escape(x) for x in extra) if extra else ''}
+              </div>
+            </div>
+            """
+            st.markdown(html_block, unsafe_allow_html=True)
+
+
+            # Explications sous le cadran
+            if lang_ui == "fr":
+                explain = """
+**Comment lire ce cadran ?**
+
+- Zone rouge : plutôt *Vente* / *Fort vente*.
+- Zone orange : plutôt *Neutre* / conserver.
+- Zone verte : plutôt *Achat* / *Fort achat*.
+
+Échelle Yahoo Finance (moyenne des analystes) :
+- 1,0 = Fort achat
+- 2,0 = Achat
+- 3,0 = Neutre
+- 4,0 = Vente
+- 5,0 = Fort vente
+"""
+            else:
+                explain = """
+**How to read this gauge?**
+
+- Red area: *Sell* / *Strong sell* bias.
+- Orange area: more *Neutral* / hold.
+- Green area: *Buy* / *Strong buy* bias.
+
+Yahoo Finance rating scale (average of analysts):
+- 1.0 = Strong buy
+- 2.0 = Buy
+- 3.0 = Hold
+- 4.0 = Sell
+- 5.0 = Strong sell
+"""
+            st.markdown(explain)
+
+            # Phrase résumé type investing.com
+            if isinstance(reco_mean, (int, float, np.number)) and not pd.isna(reco_mean):
+                if lang_ui == "fr":
+                    sentence = (
+                        f"Les analystes Yahoo classent actuellement **{t_selected}** en **{label.lower()}** "
+                        f"(score moyen {reco_mean:.2f} / 5"
+                    )
+                    if isinstance(reco_n, (int, float, np.number)) and not pd.isna(reco_n) and reco_n > 0:
+                        sentence += f", basé sur {int(reco_n)} analystes"
+                    sentence += ")."
+                else:
+                    sentence = (
+                        f"Yahoo analysts currently rate **{t_selected}** as **{label.lower()}** "
+                        f"(average score {reco_mean:.2f} / 5"
+                    )
+                    if isinstance(reco_n, (int, float, np.number)) and not pd.isna(reco_n) and reco_n > 0:
+                        sentence += f", based on {int(reco_n)} analysts"
+                    sentence += ")."
+                st.markdown(sentence)
+
+    # --------- Colonne droite : objectifs de cours ---------
+    with col_target:
+        if lang_ui == "fr":
+            st.markdown("#### Objectif de cours moyen")
+        else:
+            st.markdown("#### Average price target")
+
+        if target_mean is None or pd.isna(target_mean):
+            txt_no_pt = (
+                "Pas d'objectif de cours disponible."
+                if lang_ui == "fr"
+                else "No price target available."
+            )
+            st.info(txt_no_pt)
+        else:
+            try:
+                tgt = float(target_mean)
+                cur = float(last_price) if not pd.isna(last_price) else None
+            except Exception:
+                tgt = None
+                cur = None
+
+            if tgt is None or cur is None or cur <= 0:
+                val_label = format_price_with_currency(t_selected, tgt) if tgt is not None else "n/a"
+                st.metric(
+                    "Objectif moyen 12M" if lang_ui == "fr" else "12M average target",
+                    val_label
+                )
+            else:
+                upside_pct = (tgt / cur - 1.0) * 100.0
+                val_label = format_price_with_currency(t_selected, tgt)
+                delta_label = f"{upside_pct:+.1f} %"
+                if lang_ui == "fr":
+                    st.metric("Objectif moyen 12M", val_label, delta=f"Potentiel {delta_label}")
+                else:
+                    st.metric("12M average target", val_label, delta=f"Upside {delta_label}")
+
+            # Détails haut / bas si dispo
+            details_lines = []
+            if target_low is not None and not pd.isna(target_low):
+                if lang_ui == "fr":
+                    details_lines.append(f"Objectif bas : {format_price_with_currency(t_selected, target_low)}")
+                else:
+                    details_lines.append(f"Low target: {format_price_with_currency(t_selected, target_low)}")
+            if target_high is not None and not pd.isna(target_high):
+                if lang_ui == "fr":
+                    details_lines.append(f"Objectif haut : {format_price_with_currency(t_selected, target_high)}")
+                else:
+                    details_lines.append(f"High target: {format_price_with_currency(t_selected, target_high)}")
+
+            if details_lines:
+                st.write("\n".join(details_lines))
 
     st.markdown("---")
     st.markdown(tr("stock_news_title"))
@@ -2771,6 +3642,9 @@ with tab4:
                     st.markdown(f"[Lire l'article]({url})")
                 st.markdown("---")
 
+
+
+
     # Export fiche PDF
     st.markdown("---")
     if st.button(tr("stock_pdf_btn")):
@@ -2786,16 +3660,21 @@ with tab4:
             if info_row is not None:
                 story.append(Paragraph(f"Nom : {info_row.get('Nom', '')}", styles["Normal"]))
 
-                story.append(Paragraph(f"Secteur : {info_row.get('Secteur (API)', '')}", styles["Normal"]))
-                story.append(Paragraph(f"Industrie : {info_row.get('Industrie (API)', '')}", styles["Normal"]))
-                story.append(Paragraph(f"Pays / Devise : {info_row.get('Pays', '')} / {info_row.get('Devise', '')}", styles["Normal"]))
+                story.append(Paragraph(
+                    f"Secteur : {info_row.get('Secteur (API)', '')}", styles["Normal"]
+                ))
+                story.append(Paragraph(
+                    f"Industrie : {info_row.get('Industrie (API)', '')}", styles["Normal"]
+                ))
+                story.append(Paragraph(
+                    f"Pays / Devise : {info_row.get('Pays', '')} / {info_row.get('Devise', '')}", styles["Normal"]
+                ))
             story.append(Spacer(1, 12))
-            story.append(Paragraph(f"Prix actuel : {last_price:.2f}", styles["Normal"]))
+            story.append(Paragraph(f"Prix actuel : {format_price_with_currency(t_selected, last_price)}", styles["Normal"]))
             if not pd.isna(perf_total):
                 story.append(Paragraph(f"Perf sur la période : {perf_total:+.2f} %", styles["Normal"]))
             story.append(Spacer(1, 12))
             story.append(Paragraph("Principaux ratios :", styles["Heading3"]))
-
             if info_row is not None:
                 ratio_data = [
                     ["P/E (trailing)", str(info_row.get("P/E (trailing)", ""))],
@@ -2808,6 +3687,7 @@ with tab4:
                 story.append(Table(ratio_data, hAlign="LEFT"))
             story.append(Spacer(1, 12))
             story.append(Paragraph("Note personnelle :", styles["Heading3"]))
+
             story.append(Paragraph(new_note.replace("\n", "<br/>"), styles["Normal"]))
             doc.build(story)
             buffer.seek(0)
@@ -2833,8 +3713,7 @@ with tab5:
         "- Benchmark = comparaison vs indice (surperf 1Y vs benchmark).\n"
         "- Corrélation = qui bouge avec qui (et dans quelle intensité).\n"
         "- News = via Finnhub (si FINNHUB_API_KEY présente).\n"
-        "- Historique = Yahoo / Twelve / Finnhub avec fallback par action, cache rafraîchi toutes les 15 minutes.\n"
-        "- Polygon = tentative de prix live, mode expérimental (peut échouer ou ne rien ajouter selon la clé)."
+        "- Historique = Yahoo / Twelve / Finnhub avec fallback par action."
     )
     st.divider()
     st.markdown(tr("help_api_status"))
@@ -2844,7 +3723,7 @@ with tab5:
     with c2:
         st.write("Finnhub :", "✅" if FINNHUB_API_KEY else "⚠️")
     with c3:
-        st.write("Polygon (expérimental) :", "✅" if POLYGON_API_KEY else "⚠️")
+        st.write("Polygon :", "✅" if POLYGON_API_KEY else "⚠️")
     st.divider()
     st.markdown("### " + tr("help_glossary"))
     lang = st.session_state.get("lang", "fr")
@@ -2882,16 +3761,61 @@ with tab6:
     if "faq_history" not in st.session_state:
         st.session_state["faq_history"] = []
 
+    lang_ui = st.session_state.get("lang", "fr")
+
+    # Actions rapides (boutons pré-remplis)
+    if lang_ui == "fr":
+        st.markdown("#### Actions rapides")
+    else:
+        st.markdown("#### Quick actions")
+
+    preset_msg = None
+    col_q1, col_q2, col_q3 = st.columns(3)
+
+    with col_q1:
+        if lang_ui == "fr":
+            if st.button("❓ Fantazia Score", key="qa_score"):
+                preset_msg = "Explique-moi le Fantazia Score."
+        else:
+            if st.button("❓ Fantazia Score", key="qa_score"):
+                preset_msg = "Explain the Fantazia Score."
+
+    with col_q2:
+        if lang_ui == "fr":
+            if st.button("⚙️ Score personnalisé", key="qa_custom"):
+                preset_msg = "Explique-moi le Fantazia Score personnalisé."
+        else:
+            if st.button("⚙️ Custom score", key="qa_custom"):
+                preset_msg = "Explain the custom Fantazia Score."
+    
+    with col_q3:
+        if lang_ui == "fr":
+            if st.button("📊 Dashboard & graphiques", key="qa_dashboard"):
+                preset_msg = "Explique-moi le Dashboard et les graphiques (base 100, spread, benchmark...)."
+        else:
+            if st.button("📊 Dashboard & charts", key="qa_dashboard"):
+                preset_msg = "Explain the Dashboard and charts (base 100, spread, benchmark...)."
+
+    # Affichage de l'historique du chat
     for role, msg in st.session_state["faq_history"]:
         with st.chat_message(role):
             st.markdown(msg)
 
+    # Entrée utilisateur classique
     user_msg = st.chat_input(tr("assistant_input"))
-    if user_msg:
-        st.session_state["faq_history"].append(("user", user_msg))
-        answer = faq_answer(user_msg)
+
+    # Soit message tapé, soit message pré-rempli par un bouton
+    final_msg = user_msg or preset_msg
+
+    if final_msg:
+        # On enregistre la question
+        st.session_state["faq_history"].append(("user", final_msg))
+        # On génère la réponse via la FAQ existante
+        answer = faq_answer(final_msg)
         st.session_state["faq_history"].append(("assistant", answer))
+
+        # On affiche uniquement la nouvelle interaction (en plus de l'historique déjà rendu)
         with st.chat_message("user"):
-            st.markdown(user_msg)
+            st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)

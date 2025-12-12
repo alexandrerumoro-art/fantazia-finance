@@ -1,0 +1,16 @@
+{
+  "alexandre 1": [
+    {
+      "ticker": "RACE",
+      "kind": "pct",
+      "cmp": "ge",
+      "threshold": 2.0
+    },
+    {
+      "ticker": "NFLX",
+      "kind": "price",
+      "cmp": "ge",
+      "threshold": 110.0
+    }
+  ]
+}

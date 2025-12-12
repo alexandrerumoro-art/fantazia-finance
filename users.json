@@ -1,0 +1,14 @@
+{
+  "alexandre 1": {
+    "password_hash": "ec85b1ac0568d4b1678f954f7d93ae9fa91c3bb9b7857611c88249f631bb4ae3",
+    "salt": "6a71e7be75161d60582045599cc9a823"
+  },
+  "alexandre 2": {
+    "password_hash": "9f4b6ba77ca76f4b1d49f860e82bfaa8027afcde38cc35e9067ae077fa2a8cc0",
+    "salt": "57b4ddad5f57516cb858bf85db0533ad"
+  },
+  "test 1": {
+    "password_hash": "57a1b96cc8abad016218d296cf862adf1dca9eff8544af4b8bdb043c2e993dfc",
+    "salt": "91fd5208017388dc0485ad8f92dcf45e"
+  }
+}

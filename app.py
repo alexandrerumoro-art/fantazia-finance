@@ -36,6 +36,270 @@ def get_engine():
 
 engine = get_engine()
 
+from sqlalchemy import text
+
+def db_get_user_id(username: str):
+    username = (username or "").strip().lower()
+    if not username or engine is None:
+        return None
+    with engine.connect() as conn:
+        return conn.execute(
+            text("SELECT id FROM app_users WHERE username = :u"),
+            {"u": username},
+        ).scalar()
+
+# -------- USERS (login/signup) --------
+def db_get_user_record(username: str):
+    username = (username or "").strip().lower()
+    if not username or engine is None:
+        return None
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT username, password_hash, salt FROM app_users WHERE username = :u"),
+            {"u": username},
+        ).mappings().first()
+    return dict(row) if row else None
+
+def db_create_user(username: str, password_hash: str, salt: str) -> bool:
+    username = (username or "").strip().lower()
+    if engine is None or not username:
+        return False
+    try:
+        with engine.begin() as conn:
+            # refuse si existe déjà
+            exists = conn.execute(
+                text("SELECT 1 FROM app_users WHERE username = :u"),
+                {"u": username},
+            ).scalar()
+            if exists:
+                return False
+            conn.execute(
+                text("""
+                    INSERT INTO app_users (username, password_hash, salt)
+                    VALUES (:u, :ph, :s)
+                """),
+                {"u": username, "ph": password_hash, "s": salt},
+            )
+        return True
+    except Exception:
+        return False
+def db_load_watchlists(username: str) -> Dict[str, List[str]]:
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return {}
+
+    out: Dict[str, List[str]] = {}
+    with engine.connect() as conn:
+        wls = conn.execute(
+            text("SELECT id, name FROM watchlists WHERE user_id = :uid ORDER BY id"),
+            {"uid": uid},
+        ).mappings().all()
+
+        for wl in wls:
+            items = conn.execute(
+                text("""
+                    SELECT ticker
+                    FROM watchlist_items
+                    WHERE watchlist_id = :wid
+                    ORDER BY id
+                """),
+                {"wid": wl["id"]},
+            ).scalars().all()
+
+            out[wl["name"]] = [str(t).upper().strip() for t in items if str(t).strip()]
+
+    return out
+
+def db_save_watchlists(username: str, wl: dict):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return
+    wl = wl or {}
+    with engine.begin() as conn:
+        # delete tout pour simplifier
+        conn.execute(
+            text("""
+                DELETE FROM watchlist_items
+                WHERE watchlist_id IN (SELECT id FROM watchlists WHERE user_id = :uid)
+            """),
+            {"uid": uid},
+        )
+        conn.execute(text("DELETE FROM watchlists WHERE user_id = :uid"), {"uid": uid})
+
+        # reinsert
+        for name, tickers in wl.items():
+            name = (name or "").strip()
+            if not name:
+                continue
+            wid = conn.execute(
+                text("INSERT INTO watchlists (user_id, name) VALUES (:uid, :name) RETURNING id"),
+                {"uid": uid, "name": name},
+            ).scalar()
+            for t in (tickers or []):
+                t = str(t).upper().strip()
+                if t:
+                    conn.execute(
+                        text("INSERT INTO watchlist_items (watchlist_id, ticker) VALUES (:wid, :t)"),
+                        {"wid": wid, "t": t},
+                    )
+
+# -------- ALERTS --------
+def db_load_alerts(username: str):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return []
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT ticker, kind, cmp, threshold
+                FROM alerts
+                WHERE user_id = :uid
+                ORDER BY id
+            """),
+            {"uid": uid},
+        ).mappings().all()
+    return [dict(r) for r in rows]
+
+def db_save_alerts(username: str, alerts: list):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return
+    alerts = alerts or []
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM alerts WHERE user_id = :uid"), {"uid": uid})
+        for a in alerts:
+            conn.execute(
+                text("""
+                    INSERT INTO alerts (user_id, ticker, kind, cmp, threshold)
+                    VALUES (:uid, :t, :k, :c, :thr)
+                """),
+                {
+                    "uid": uid,
+                    "t": str(a.get("ticker","")).upper().strip(),
+                    "k": a.get("kind"),
+                    "c": a.get("cmp"),
+                    "thr": float(a.get("threshold", 0.0)),
+                },
+            )
+
+# -------- NOTES --------
+def db_load_notes(username: str):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return {}
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("SELECT ticker, note FROM notes WHERE user_id = :uid"),
+            {"uid": uid},
+        ).mappings().all()
+    return {str(r["ticker"]).upper(): str(r["note"] or "") for r in rows}
+
+def db_save_notes(username: str, notes: dict):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return
+    notes = notes or {}
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM notes WHERE user_id = :uid"), {"uid": uid})
+        for t, note in notes.items():
+            t = str(t).upper().strip()
+            if not t:
+                continue
+            conn.execute(
+                text("INSERT INTO notes (user_id, ticker, note) VALUES (:uid, :t, :n)"),
+                {"uid": uid, "t": t, "n": str(note or "")},
+            )
+
+# -------- NEWS SUBSCRIPTIONS --------
+def db_load_news_subscriptions(username: str):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return []
+    with engine.connect() as conn:
+        tickers = conn.execute(
+            text("SELECT ticker FROM news_subscriptions WHERE user_id = :uid ORDER BY id"),
+            {"uid": uid},
+        ).scalars().all()
+    return sorted(list({str(t).upper().strip() for t in tickers if str(t).strip()}))
+
+def db_save_news_subscriptions(username: str, subs: list):
+    uid = db_get_user_id(username)
+    if uid is None or engine is None:
+        return
+    subs = subs or []
+    clean = sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM news_subscriptions WHERE user_id = :uid"), {"uid": uid})
+        for t in clean:
+            conn.execute(
+                text("INSERT INTO news_subscriptions (user_id, ticker) VALUES (:uid, :t)"),
+                {"uid": uid, "t": t},
+            )
+# =========================================================
+# STORAGE WRAPPERS (DB si dispo, sinon JSON fallback)
+# =========================================================
+
+# --- WATCHLISTS ---
+
+
+def save_watchlists(user: str, wl: dict) -> None:
+    # DB si dispo
+    if engine is not None and db_get_user_id(user) is not None:
+        db_save_watchlists(user, wl or {})
+        return
+    # fallback JSON
+    json_save_watchlists(user, wl or {})
+
+
+def load_watchlists(user: str) -> dict:
+    # DB si dispo
+    if engine is not None and db_get_user_id(user) is not None:
+        return db_load_watchlists(user)
+    # fallback JSON
+    return json_load_watchlists(user)
+
+
+# --- ALERTS ---
+def json_save_alerts(user: str, alerts: list) -> None:
+    if engine is not None and db_get_user_id(user) is not None:
+        db_save_alerts(user, alerts or [])
+        return
+    json_save_alerts(user, alerts or [])
+
+
+def json_load_alerts(user: str) -> list:
+    if engine is not None and db_get_user_id(user) is not None:
+        return db_load_alerts(user)
+    return json_load_alerts(user)
+
+
+# --- NOTES ---
+def json_save_notes(user: str, notes: dict) -> None:
+    if engine is not None and db_get_user_id(user) is not None:
+        db_save_notes(user, notes or {})
+        return
+    json_save_notes(user, notes or {})
+
+
+def json_load_notes(user: str) -> dict:
+    if engine is not None and db_get_user_id(user) is not None:
+        return db_load_notes(user)
+    return json_load_notes(user)
+
+
+# --- NEWS SUBSCRIPTIONS ---
+def json_save_news_subscriptions(user: str, subs: list) -> None:
+    if engine is not None and db_get_user_id(user) is not None:
+        db_save_news_subscriptions(user, subs or [])
+        return
+    json_save_news_subscriptions(user, subs or [])
+
+
+def json_load_news_subscriptions(user: str) -> list:
+    if engine is not None and db_get_user_id(user) is not None:
+        return db_load_news_subscriptions(user)
+    return json_load_news_subscriptions(user)
+
 # DEBUG
 if st.sidebar.checkbox("DEBUG DB", value=False):
     if engine is None:
@@ -781,6 +1045,10 @@ def ensure_authenticated() -> str:
                 pwd_hash = hash_password(pwd, salt)
                 users[username] = {"password_hash": pwd_hash, "salt": salt}
                 save_users(users)
+                # Sync user in DB (so DB storage works)
+        if engine is not None:
+        db_create_user(username, pwd_hash, salt)
+
                 st.session_state["user"] = username
                 msg.success(tr("login_ok_signup"))
                 rerun_app()
@@ -800,6 +1068,10 @@ def ensure_authenticated() -> str:
                     msg.error(tr("login_err_corrupt"))
                 else:
                     if hash_password(pwd, salt) == expected:
+                        # Ensure user exists in DB (so DB storage works)
+       if engine is not None:
+        db_create_user(username, expected, salt)
+
                         st.session_state["user"] = username
                         msg.success(tr("login_ok_login"))
                         rerun_app()
@@ -810,6 +1082,10 @@ def ensure_authenticated() -> str:
 
 
 CURRENT_USER = ensure_authenticated()
+
+# DEBUG: afficher l'id DB de l'utilisateur
+st.sidebar.write("DB user id =", db_get_user_id(CURRENT_USER))
+
 
 
 # =========================================================
@@ -850,7 +1126,15 @@ def load_config() -> Dict:
 # =========================================================
 # WATCHLISTS
 # =========================================================
-def load_watchlists(user: str) -> Dict[str, List[str]]:
+def json_load_watchlists(user: str) -> Dict[str, List[str]]:
+    # ✅ DB si dispo
+    if engine is not None:
+        try:
+            return db_load_watchlists(user)
+        except Exception:
+            pass
+
+    # 🔁 Fallback JSON
     if not os.path.exists(WATCHLIST_FILE):
         return {}
     try:
@@ -858,15 +1142,12 @@ def load_watchlists(user: str) -> Dict[str, List[str]]:
             data = json.load(f)
     except Exception:
         return {}
-    if isinstance(data, dict):
-        if user in data and isinstance(data[user], dict):
-            base = data[user]
-        elif all(isinstance(v, list) for v in data.values()):
-            base = data
-        else:
-            base = {}
+
+    if isinstance(data, dict) and user in data and isinstance(data[user], dict):
+        base = data[user]
     else:
         base = {}
+
     clean = {}
     for name, vals in base.items():
         if isinstance(vals, list):
@@ -874,7 +1155,16 @@ def load_watchlists(user: str) -> Dict[str, List[str]]:
     return clean
 
 
-def save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
+def json_save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
+    # ✅ DB si dispo
+    if engine is not None:
+        try:
+            db_save_watchlists(user, wl)
+            return
+        except Exception:
+            pass
+
+    # 🔁 Fallback JSON
     data = {}
     if os.path.exists(WATCHLIST_FILE):
         try:
@@ -884,9 +1174,11 @@ def save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
                 data = tmp
         except Exception:
             data = {}
+
     data[user] = wl
     with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
 
 
 def parse_tickers(text: str) -> List[str]:
@@ -896,7 +1188,7 @@ def parse_tickers(text: str) -> List[str]:
 # =========================================================
 # NEWS SUBSCRIPTIONS
 # =========================================================
-def load_news_subscriptions(user: str) -> List[str]:
+def json_load_news_subscriptions(user: str) -> List[str]:
     if not os.path.exists(NEWS_SUB_FILE):
         return []
     try:
@@ -912,7 +1204,7 @@ def load_news_subscriptions(user: str) -> List[str]:
     return sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
 
 
-def save_news_subscriptions(user: str, subs: List[str]) -> None:
+def json_save_news_subscriptions(user: str, subs: List[str]) -> None:
     clean = sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
     data = {}
     if os.path.exists(NEWS_SUB_FILE):
@@ -931,7 +1223,7 @@ def save_news_subscriptions(user: str, subs: List[str]) -> None:
 # =========================================================
 # ALERTS
 # =========================================================
-def load_alerts(user: str) -> List[Dict]:
+def json_load_alerts(user: str) -> List[Dict]:
     if not os.path.exists(ALERTS_FILE):
         return []
     try:
@@ -951,7 +1243,7 @@ def load_alerts(user: str) -> List[Dict]:
     return clean_alerts
 
 
-def save_alerts(user: str, alerts: List[Dict]) -> None:
+def json_save_alerts(user: str, alerts: List[Dict]) -> None:
     data = {}
     if os.path.exists(ALERTS_FILE):
         try:
@@ -969,7 +1261,7 @@ def save_alerts(user: str, alerts: List[Dict]) -> None:
 # =========================================================
 # NOTES PERSO
 # =========================================================
-def load_notes(user: str) -> Dict[str, str]:
+def json_load_notes(user: str) -> Dict[str, str]:
     if not os.path.exists(NOTES_FILE):
         return {}
     try:
@@ -985,7 +1277,7 @@ def load_notes(user: str) -> Dict[str, str]:
     return {str(k).upper(): str(v) for k, v in user_notes.items()}
 
 
-def save_notes(user: str, notes: Dict[str, str]) -> None:
+def json_save_notes(user: str, notes: Dict[str, str]) -> None:
     data = {}
     if os.path.exists(NOTES_FILE):
         try:
@@ -3898,3 +4190,4 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
+

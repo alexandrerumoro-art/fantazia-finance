@@ -16,30 +16,39 @@ import plotly.express as px
 import streamlit as st
 from sqlalchemy import create_engine, text
 
-DB_URL = st.secrets.get("DATABASE_URL") or st.secrets.get("DB_URL") or ""
+DB_URL = st.secrets.get("DB_URL", "").strip()
 
 @st.cache_resource
 def get_engine():
     if not DB_URL:
         return None
-    return create_engine(DB_URL, pool_pre_ping=True)
 
-# --- DEBUG DB (TOUJOURS visible) ---
-with st.sidebar.expander("🛠️ DEBUG DB", expanded=False):
-    st.write("Secrets keys:", list(st.secrets.keys()))
-    st.write("DB_URL set:", bool(DB_URL))
+    url = DB_URL
 
-    if st.button("Test DB connection"):
-        engine = get_engine()
-        if engine is None:
-            st.error("DB_URL / DATABASE_URL manquant dans st.secrets")
-        else:
-            try:
-                with engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                st.success("✅ DB connectée")
-            except Exception as e:
-                st.error(f"❌ DB KO: {e}")
+    # Si ton URL commence par postgresql://, SQLAlchemy va souvent chercher psycopg2 par défaut.
+    # On force psycopg (v3) :
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    elif url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url[len("postgres://"):]
+
+    return create_engine(url, pool_pre_ping=True)
+
+engine = get_engine()
+
+# DEBUG
+if st.sidebar.checkbox("DEBUG DB", value=False):
+    if engine is None:
+        st.sidebar.error("DB_URL manquant")
+        st.sidebar.write("Clés disponibles :", list(st.secrets.keys()))
+    else:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            st.sidebar.success("✅ DB connectée")
+        except Exception as e:
+            st.sidebar.error(f"❌ DB KO: {e}")
+
 
 
 
@@ -3890,4 +3899,3 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
-

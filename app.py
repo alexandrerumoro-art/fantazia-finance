@@ -15,7 +15,11 @@ import numpy as np
 import plotly.express as px
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = st.secrets.get("DATABASE_URL", "")
+DATABASE_URL = st.secrets.get("DATABASE_URL") or st.secrets.get("DB_URL", "")
+
+# Supabase recommande SSL (souvent nécessaire)
+if DATABASE_URL and "sslmode=" not in DATABASE_URL:
+    DATABASE_URL += ("&" if "?" in DATABASE_URL else "?") + "sslmode=require"
 
 @st.cache_resource
 def get_engine():
@@ -24,18 +28,14 @@ def get_engine():
     return create_engine(DATABASE_URL, pool_pre_ping=True)
 
 engine = get_engine()
-
-if st.sidebar.checkbox("DEBUG DB", value=False):
+def init_db(engine):
     if engine is None:
-        st.sidebar.error("DATABASE_URL manquant")
-        st.sidebar.write("Clés disponibles dans st.secrets :", list(st.secrets.keys()))
-    else:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            st.sidebar.success("✅ DB connectée")
-        except Exception as e:
-            st.sidebar.error(f"❌ DB KO: {e}")
+        return
+    with engine.begin() as conn:
+        conn.execute(text("""SELECT 1"""))  # simple ping
+
+init_db(engine)
+
 
 
 # --- Clés API (depuis Streamlit Secrets / secrets.toml local) ---

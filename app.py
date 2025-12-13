@@ -151,7 +151,20 @@ seed_file_from_b64(NEWS_SUB_FILE, NEWS_SUBSCRIPTIONS_JSON_B64, {})
 
 
 def _json_read(path: str, default):
-    if not os.path
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+def _json_write(path: str, data) -> None:
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
 # =========================================================
 # PARTIE 2/2 — UI + FEATURES (watchlists/alerts/notes/news)
 # =========================================================

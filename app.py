@@ -431,6 +431,28 @@ def json_load_notes(user: str) -> dict:
         return db_load_notes(user)
     return json_load_notes(user)
 
+# --- NEWS SUBSCRIPTIONS (WRAPPER DB si dispo sinon JSON) ---
+def load_news_subscriptions(user: str) -> list:
+    if engine is not None:
+        uid = db_get_user_id(user)
+        if uid is not None:
+            try:
+                return db_load_news_subscriptions(user)
+            except Exception:
+                pass
+    return json_load_news_subscriptions(user)
+
+
+def save_news_subscriptions(user: str, subs: list) -> None:
+    if engine is not None:
+        uid = db_get_user_id(user)
+        if uid is not None:
+            try:
+                db_save_news_subscriptions(user, subs or [])
+                return
+            except Exception:
+                pass
+    json_save_news_subscriptions(user, subs or [])
 
 # --- NEWS SUBSCRIPTIONS ---
 def json_save_news_subscriptions(user: str, subs: list) -> None:

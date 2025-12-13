@@ -35,6 +35,57 @@ def get_engine():
     return create_engine(url, pool_pre_ping=True)
 
 engine = get_engine()
+def db_init_schema():
+    if engine is None:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS app_users (
+            id BIGSERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            salt TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS watchlists (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS watchlist_items (
+            id BIGSERIAL PRIMARY KEY,
+            watchlist_id BIGINT NOT NULL REFERENCES watchlists(id) ON DELETE CASCADE,
+            ticker TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS alerts (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+            ticker TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            cmp TEXT NOT NULL,
+            threshold DOUBLE PRECISION NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS notes (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+            ticker TEXT NOT NULL,
+            note TEXT NOT NULL,
+            UNIQUE(user_id, ticker)
+        );
+
+        CREATE TABLE IF NOT EXISTS news_subscriptions (
+            id BIGSERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+            ticker TEXT NOT NULL
+        );
+        """))
+
+# appelle l’init une seule fois au démarrage
+db_init_schema()
 
 from sqlalchemy import text
 
@@ -310,8 +361,16 @@ if st.sidebar.checkbox("DEBUG DB", value=False):
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             st.sidebar.success("✅ DB connectée")
+
+            try:
+                uid = db_get_user_id(CURRENT_USER)
+                st.sidebar.write("DB user id =", uid)
+            except Exception as e:
+                st.sidebar.error(f"db_get_user_id crash: {e}")
+
         except Exception as e:
             st.sidebar.error(f"❌ DB KO: {e}")
+
 
 
 
@@ -1093,7 +1152,7 @@ def ensure_authenticated() -> str:
 CURRENT_USER = ensure_authenticated()
 
 # DEBUG: afficher l'id DB de l'utilisateur
-st.sidebar.write("DB user id =", db_get_user_id(CURRENT_USER))
+
 
 
 

@@ -155,6 +155,8 @@ db_init_schema()
 
 from sqlalchemy import text
 
+from sqlalchemy.exc import SQLAlchemyError
+
 def db_get_user_id(username: str):
     username = (username or "").strip().lower()
     if not username or engine is None:
@@ -165,9 +167,9 @@ def db_get_user_id(username: str):
                 text("SELECT id FROM app_users WHERE username = :u"),
                 {"u": username},
             ).scalar()
-    except Exception:
-        # Si la table n'existe pas / souci DB => on désactive juste le DB pour cet appel
+    except SQLAlchemyError:
         return None
+
 
 
 # -------- USERS (login/signup) --------
@@ -303,6 +305,27 @@ def db_save_alerts(username: str, alerts: list):
                     "thr": float(a.get("threshold", 0.0)),
                 },
             )
+# --- ALERTS (WRAPPER DB si dispo sinon JSON) ---
+def load_alerts(user: str) -> list:
+    if engine is not None:
+        uid = db_get_user_id(user)
+        if uid is not None:
+            try:
+                return db_load_alerts(user)
+            except Exception:
+                pass
+    return json_load_alerts(user)
+
+def save_alerts(user: str, alerts: list) -> None:
+    if engine is not None:
+        uid = db_get_user_id(user)
+        if uid is not None:
+            try:
+                db_save_alerts(user, alerts or [])
+                return
+            except Exception:
+                pass
+    json_save_alerts(user, alerts or [])
 
 # -------- NOTES --------
 def db_load_notes(username: str):

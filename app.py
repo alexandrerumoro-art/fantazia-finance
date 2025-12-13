@@ -14,7 +14,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import streamlit as st
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text as sql_text
+
 
 DB_URL = st.secrets.get("DB_URL", "").strip()
 
@@ -39,7 +40,7 @@ def db_init_schema():
     if engine is None:
         return
     with engine.begin() as conn:
-        conn.execute(text("""
+        conn.execute(sql_text(""
             CREATE TABLE IF NOT EXISTS app_users (
                 id BIGSERIAL PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
@@ -48,7 +49,7 @@ def db_init_schema():
             );
         """))
 
-        conn.execute(text("""
+        conn.execute(sql_text(""
             CREATE TABLE IF NOT EXISTS watchlists (
                 id BIGSERIAL PRIMARY KEY,
                 user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -57,7 +58,7 @@ def db_init_schema():
             );
         """))
 
-        conn.execute(text("""
+        conn.execute(sql_text(""
             CREATE TABLE IF NOT EXISTS watchlist_items (
                 id BIGSERIAL PRIMARY KEY,
                 watchlist_id BIGINT NOT NULL REFERENCES watchlists(id) ON DELETE CASCADE,
@@ -65,7 +66,7 @@ def db_init_schema():
             );
         """))
 
-        conn.execute(text("""
+        conn.execute(sql_text(""
             CREATE TABLE IF NOT EXISTS alerts (
                 id BIGSERIAL PRIMARY KEY,
                 user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -76,7 +77,7 @@ def db_init_schema():
             );
         """))
 
-        conn.execute(text("""
+        conn.execute(sql_text(""
             CREATE TABLE IF NOT EXISTS notes (
                 id BIGSERIAL PRIMARY KEY,
                 user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -86,7 +87,7 @@ def db_init_schema():
             );
         """))
 
-        conn.execute(text("""
+        conn.execute(sql_text(""
             CREATE TABLE IF NOT EXISTS news_subscriptions (
                 id BIGSERIAL PRIMARY KEY,
                 user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -105,7 +106,7 @@ def db_init_schema():
     if engine is None:
         return
     with engine.begin() as conn:
-        conn.execute(text("""
+        conn.execute(sql_text(""
         CREATE TABLE IF NOT EXISTS app_users (
             id BIGSERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -164,7 +165,8 @@ def db_get_user_id(username: str):
     try:
         with engine.connect() as conn:
             return conn.execute(
-                text("SELECT id FROM app_users WHERE username = :u"),
+                sql_sql_text(SELECT id FROM app_users WHERE username = :u")
+,
                 {"u": username},
             ).scalar()
     except SQLAlchemyError:
@@ -179,7 +181,7 @@ def db_get_user_record(username: str):
         return None
     with engine.connect() as conn:
         row = conn.execute(
-            text("SELECT username, password_hash, salt FROM app_users WHERE username = :u"),
+            sql_text(SELECT username, password_hash, salt FROM app_users WHERE username = :u"),
             {"u": username},
         ).mappings().first()
     return dict(row) if row else None
@@ -192,13 +194,13 @@ def db_create_user(username: str, password_hash: str, salt: str) -> bool:
         with engine.begin() as conn:
             # refuse si existe déjà
             exists = conn.execute(
-                text("SELECT 1 FROM app_users WHERE username = :u"),
+                sql_text(SELECT 1 FROM app_users WHERE username = :u"),
                 {"u": username},
             ).scalar()
             if exists:
                 return False
             conn.execute(
-                text("""
+                sql_text(""
                     INSERT INTO app_users (username, password_hash, salt)
                     VALUES (:u, :ph, :s)
                 """),
@@ -215,13 +217,13 @@ def db_load_watchlists(username: str) -> Dict[str, List[str]]:
     out: Dict[str, List[str]] = {}
     with engine.connect() as conn:
         wls = conn.execute(
-            text("SELECT id, name FROM watchlists WHERE user_id = :uid ORDER BY id"),
+            sql_text(SELECT id, name FROM watchlists WHERE user_id = :uid ORDER BY id"),
             {"uid": uid},
         ).mappings().all()
 
         for wl in wls:
             items = conn.execute(
-                text("""
+                sql_text(""
                     SELECT ticker
                     FROM watchlist_items
                     WHERE watchlist_id = :wid
@@ -242,13 +244,13 @@ def db_save_watchlists(username: str, wl: dict):
     with engine.begin() as conn:
         # delete tout pour simplifier
         conn.execute(
-            text("""
+            sql_text(""
                 DELETE FROM watchlist_items
                 WHERE watchlist_id IN (SELECT id FROM watchlists WHERE user_id = :uid)
             """),
             {"uid": uid},
         )
-        conn.execute(text("DELETE FROM watchlists WHERE user_id = :uid"), {"uid": uid})
+        conn.execute(sql_text(DELETE FROM watchlists WHERE user_id = :uid"), {"uid": uid})
 
         # reinsert
         for name, tickers in wl.items():
@@ -256,14 +258,14 @@ def db_save_watchlists(username: str, wl: dict):
             if not name:
                 continue
             wid = conn.execute(
-                text("INSERT INTO watchlists (user_id, name) VALUES (:uid, :name) RETURNING id"),
+                sql_text(INSERT INTO watchlists (user_id, name) VALUES (:uid, :name) RETURNING id"),
                 {"uid": uid, "name": name},
             ).scalar()
             for t in (tickers or []):
                 t = str(t).upper().strip()
                 if t:
                     conn.execute(
-                        text("INSERT INTO watchlist_items (watchlist_id, ticker) VALUES (:wid, :t)"),
+                        sql_text(INSERT INTO watchlist_items (watchlist_id, ticker) VALUES (:wid, :t)"),
                         {"wid": wid, "t": t},
                     )
 
@@ -274,7 +276,7 @@ def db_load_alerts(username: str):
         return []
     with engine.connect() as conn:
         rows = conn.execute(
-            text("""
+            sql_text(""
                 SELECT ticker, kind, cmp, threshold
                 FROM alerts
                 WHERE user_id = :uid
@@ -290,10 +292,10 @@ def db_save_alerts(username: str, alerts: list):
         return
     alerts = alerts or []
     with engine.begin() as conn:
-        conn.execute(text("DELETE FROM alerts WHERE user_id = :uid"), {"uid": uid})
+        conn.execute(sql_text(DELETE FROM alerts WHERE user_id = :uid"), {"uid": uid})
         for a in alerts:
             conn.execute(
-                text("""
+                sql_text(""
                     INSERT INTO alerts (user_id, ticker, kind, cmp, threshold)
                     VALUES (:uid, :t, :k, :c, :thr)
                 """),
@@ -334,7 +336,7 @@ def db_load_notes(username: str):
         return {}
     with engine.connect() as conn:
         rows = conn.execute(
-            text("SELECT ticker, note FROM notes WHERE user_id = :uid"),
+            sql_text(SELECT ticker, note FROM notes WHERE user_id = :uid"),
             {"uid": uid},
         ).mappings().all()
     return {str(r["ticker"]).upper(): str(r["note"] or "") for r in rows}
@@ -345,13 +347,13 @@ def db_save_notes(username: str, notes: dict):
         return
     notes = notes or {}
     with engine.begin() as conn:
-        conn.execute(text("DELETE FROM notes WHERE user_id = :uid"), {"uid": uid})
+        conn.execute(sql_text(DELETE FROM notes WHERE user_id = :uid"), {"uid": uid})
         for t, note in notes.items():
             t = str(t).upper().strip()
             if not t:
                 continue
             conn.execute(
-                text("INSERT INTO notes (user_id, ticker, note) VALUES (:uid, :t, :n)"),
+                sql_text(INSERT INTO notes (user_id, ticker, note) VALUES (:uid, :t, :n)"),
                 {"uid": uid, "t": t, "n": str(note or "")},
             )
 
@@ -362,7 +364,7 @@ def db_load_news_subscriptions(username: str):
         return []
     with engine.connect() as conn:
         tickers = conn.execute(
-            text("SELECT ticker FROM news_subscriptions WHERE user_id = :uid ORDER BY id"),
+            sql_text(SELECT ticker FROM news_subscriptions WHERE user_id = :uid ORDER BY id"),
             {"uid": uid},
         ).scalars().all()
     return sorted(list({str(t).upper().strip() for t in tickers if str(t).strip()}))
@@ -374,10 +376,10 @@ def db_save_news_subscriptions(username: str, subs: list):
     subs = subs or []
     clean = sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
     with engine.begin() as conn:
-        conn.execute(text("DELETE FROM news_subscriptions WHERE user_id = :uid"), {"uid": uid})
+        conn.execute(sql_text(DELETE FROM news_subscriptions WHERE user_id = :uid"), {"uid": uid})
         for t in clean:
             conn.execute(
-                text("INSERT INTO news_subscriptions (user_id, ticker) VALUES (:uid, :t)"),
+                sql_text(INSERT INTO news_subscriptions (user_id, ticker) VALUES (:uid, :t)"),
                 {"uid": uid, "t": t},
             )
 # =========================================================
@@ -475,7 +477,7 @@ if st.sidebar.checkbox("DEBUG DB", value=False):
     else:
         try:
             with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
+                conn.execute(sql_text(SELECT 1"))
             st.sidebar.success("✅ DB connectée")
 
             try:
@@ -2568,17 +2570,18 @@ with tab1:
             f"[{a['ticker']}] {a['desc']}"
             for a in triggered_alerts
         ]
-        text = "  •  ".join(html.escape(m) for m in messages)
-        st.markdown(
-            f"""
-            <div class="ff-marquee">
-              <div class="ff-marquee-inner">
-                🔔 {text}
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        marquee_text = "  •  ".join(html.escape(m) for m in messages)
+st.markdown(
+    f"""
+    <div class="ff-marquee">
+      <div class="ff-marquee-inner">
+        🔔 {marquee_text}
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
         st.caption(tr("alerts_ribbon_info"))
     else:
         st.caption(tr("alerts_ribbon_info"))

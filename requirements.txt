@@ -5,3 +5,5 @@ numpy
 plotly
 requests
 streamlit-autorefresh
+sqlalchemy
+psycopg2-binary

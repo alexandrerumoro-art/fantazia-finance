@@ -13,6 +13,30 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from sqlalchemy import create_engine, text
+
+DATABASE_URL = st.secrets.get("DATABASE_URL", "")
+
+@st.cache_resource
+def get_engine():
+    if not DATABASE_URL:
+        return None
+    return create_engine(DATABASE_URL, pool_pre_ping=True)
+
+engine = get_engine()
+
+if st.sidebar.checkbox("DEBUG DB", value=False):
+    if engine is None:
+        st.sidebar.error("DATABASE_URL manquant")
+        st.sidebar.write("Clés disponibles dans st.secrets :", list(st.secrets.keys()))
+    else:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            st.sidebar.success("✅ DB connectée")
+        except Exception as e:
+            st.sidebar.error(f"❌ DB KO: {e}")
+
 
 # --- Clés API (depuis Streamlit Secrets / secrets.toml local) ---
 TWELVE_API_KEY = st.secrets.get("TWELVE_API_KEY", "")
@@ -20,6 +44,11 @@ FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
 ALPHAVANTAGE_API_KEY = st.secrets.get("ALPHAVANTAGE_API_KEY", "")
 POLYGON_API_KEY = st.secrets.get("POLYGON_API_KEY", "")
 
+USERS_JSON_B64 = st.secrets.get("USERS_JSON_B64", "")
+WATCHLISTS_JSON_B64 = st.secrets.get("WATCHLISTS_JSON_B64", "")
+ALERTS_JSON_B64 = st.secrets.get("ALERTS_JSON_B64", "")
+NOTES_JSON_B64 = st.secrets.get("NOTES_JSON_B64", "")
+NEWS_SUBSCRIPTIONS_JSON_B64 = st.secrets.get("NEWS_SUBSCRIPTIONS_JSON_B64", "")
 
 
 
@@ -155,7 +184,7 @@ TRANSLATIONS = {
         "custom_score_info": "Si activé, les classements et filtres utilisent ton Fantazia Score perso (basé sur les poids ci-dessous). Le score officiel reste visible pour référence.",
         "tech_notes_title": "ℹ️ Notes techniques",
         "mynews_title": "📰 Mes news suivies (abonnements)",
-        "mynews_no_key": "Aucune clé Finnhub configurée → impossible de charger les news. Ajoute `FINNHUB_API_KEY` dans config.json.",
+        "mynews_no_key": "Aucune clé Finnhub configurée → impossible de charger les news. Ajoute `FINNHUB_API_KEY` dans Streamlit Secrets.",
         "mynews_no_subs": "Tu n'es abonné aux news d'aucune action pour l'instant. Va dans l'onglet **📄 Fiche action** et coche *\"Suivre les news de TICKER\"*.",
         "mynews_none_recent": "Aucune news récente trouvée pour tes abonnements, ou bien rafraîchissez la page.",
         "watchlists_title": "⭐ Gérer tes watchlists (locales, liées à ton compte)",
@@ -310,7 +339,7 @@ TRANSLATIONS = {
         "custom_score_info": "If enabled, rankings and filters use your custom Fantazia Score (based on the weights below). The official score remains visible for reference.",
         "tech_notes_title": "ℹ️ Technical notes",
         "mynews_title": "📰 My followed news (subscriptions)",
-        "mynews_no_key": "No Finnhub key configured → cannot load news. Add `FINNHUB_API_KEY` in config.json.",
+        "mynews_no_key": "No Finnhub key configured → cannot load news. Add `FINNHUB_API_KEY` in Streamlit Secrets.",
         "mynews_no_subs": "You are not subscribed to any stock news yet. Go to **📄 Stock sheet** and check *\"Follow news of TICKER\"*.",
         "mynews_none_recent": "No recent news found for your subscriptions, or please refresh the page.",
         "watchlists_title": "⭐ Manage your watchlists (local, account-linked)",
@@ -648,6 +677,35 @@ CONFIG_FILE = "config.json"
 ALERTS_FILE = "alerts.json"
 NOTES_FILE = "notes.json"
 
+def seed_file_from_b64(path: str, b64_value: str, default_json_obj):
+    # Si le fichier existe déjà, on ne touche à rien
+    if os.path.exists(path):
+        return
+
+    # Si secret présent -> on restaure depuis base64
+    if isinstance(b64_value, str) and b64_value.strip():
+        try:
+            raw = base64.b64decode(b64_value.encode("utf-8"))
+            with open(path, "wb") as f:
+                f.write(raw)
+            return
+        except Exception:
+            pass
+
+    # Sinon -> on crée un JSON par défaut (vide)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(default_json_obj, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
+# Seed des fichiers JSON (option 1)
+seed_file_from_b64(USERS_FILE, USERS_JSON_B64, {})
+seed_file_from_b64(WATCHLIST_FILE, WATCHLISTS_JSON_B64, {})
+seed_file_from_b64(ALERTS_FILE, ALERTS_JSON_B64, {})
+seed_file_from_b64(NOTES_FILE, NOTES_JSON_B64, {})
+seed_file_from_b64(NEWS_SUB_FILE, NEWS_SUBSCRIPTIONS_JSON_B64, {})
 
 # =========================================================
 # USERS
@@ -772,15 +830,6 @@ def load_config() -> Dict:
         except Exception:
             return {}
     return {}
-
-CONFIG = load_config()
-
-# On garde en priorité les Secrets Streamlit.
-# Et on prend config.json seulement si la clé est vide.
-TWELVE_API_KEY = (TWELVE_API_KEY or str(CONFIG.get("TWELVE_API_KEY", "")).strip())
-FINNHUB_API_KEY = (FINNHUB_API_KEY or str(CONFIG.get("FINNHUB_API_KEY", "")).strip())
-POLYGON_API_KEY = (POLYGON_API_KEY or str(CONFIG.get("POLYGON_API_KEY", "")).strip())
-ALPHAVANTAGE_API_KEY = (ALPHAVANTAGE_API_KEY or str(CONFIG.get("ALPHAVANTAGE_API_KEY", "")).strip())
 
 
 

@@ -40,6 +40,72 @@ def db_init_schema():
         return
     with engine.begin() as conn:
         conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS app_users (
+                id BIGSERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL
+            );
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS watchlists (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                UNIQUE(user_id, name)
+            );
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS watchlist_items (
+                id BIGSERIAL PRIMARY KEY,
+                watchlist_id BIGINT NOT NULL REFERENCES watchlists(id) ON DELETE CASCADE,
+                ticker TEXT NOT NULL
+            );
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS alerts (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+                ticker TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                cmp TEXT NOT NULL,
+                threshold DOUBLE PRECISION NOT NULL
+            );
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS notes (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+                ticker TEXT NOT NULL,
+                note TEXT NOT NULL,
+                UNIQUE(user_id, ticker)
+            );
+        """))
+
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS news_subscriptions (
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+                ticker TEXT NOT NULL,
+                UNIQUE(user_id, ticker)
+            );
+        """))
+
+# Appel safe (ne doit JAMAIS casser l'app)
+try:
+    db_init_schema()
+except Exception:
+    pass
+
+def db_init_schema():
+    if engine is None:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("""
         CREATE TABLE IF NOT EXISTS app_users (
             id BIGSERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
@@ -93,11 +159,16 @@ def db_get_user_id(username: str):
     username = (username or "").strip().lower()
     if not username or engine is None:
         return None
-    with engine.connect() as conn:
-        return conn.execute(
-            text("SELECT id FROM app_users WHERE username = :u"),
-            {"u": username},
-        ).scalar()
+    try:
+        with engine.connect() as conn:
+            return conn.execute(
+                text("SELECT id FROM app_users WHERE username = :u"),
+                {"u": username},
+            ).scalar()
+    except Exception:
+        # Si la table n'existe pas / souci DB => on désactive juste le DB pour cet appel
+        return None
+
 
 # -------- USERS (login/signup) --------
 def db_get_user_record(username: str):

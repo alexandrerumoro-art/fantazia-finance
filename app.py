@@ -1028,10 +1028,12 @@ def ensure_authenticated() -> str:
 
     if mode == tr("login_mode_signup"):
         password_confirm = st.text_input(tr("login_password_confirm"), type="password")
+
         if st.button(tr("login_btn_signup")):
             username = username_input.strip().lower()
             pwd = password_input
             pwd2 = password_confirm
+
             if not username or len(username) < 3:
                 msg.error(tr("login_err_short_user"))
             elif username in users:
@@ -1043,20 +1045,24 @@ def ensure_authenticated() -> str:
             else:
                 salt = secrets.token_hex(16)
                 pwd_hash = hash_password(pwd, salt)
+
+                # Save in JSON
                 users[username] = {"password_hash": pwd_hash, "salt": salt}
                 save_users(users)
-                # Sync user in DB (so DB storage works)
-        if engine is not None:
-            db_create_user(username, pwd_hash, salt)
 
+                # Sync user in DB (so DB storage works)
+                if engine is not None:
+                    db_create_user(username, pwd_hash, salt)
 
                 st.session_state["user"] = username
                 msg.success(tr("login_ok_signup"))
                 rerun_app()
+
     else:
         if st.button(tr("login_btn_login")):
             username = username_input.strip().lower()
             pwd = password_input
+
             if not username or not pwd:
                 msg.error(tr("login_err_missing"))
             elif username not in users:
@@ -1065,14 +1071,14 @@ def ensure_authenticated() -> str:
                 user_rec = users[username]
                 salt = user_rec.get("salt", "")
                 expected = user_rec.get("password_hash", "")
+
                 if not salt or not expected:
                     msg.error(tr("login_err_corrupt"))
                 else:
                     if hash_password(pwd, salt) == expected:
-                                                # Ensure user exists in DB (so DB storage works)
+                        # Ensure user exists in DB (so DB storage works)
                         if engine is not None:
                             db_create_user(username, expected, salt)
-
 
                         st.session_state["user"] = username
                         msg.success(tr("login_ok_login"))
@@ -1081,6 +1087,7 @@ def ensure_authenticated() -> str:
                         msg.error(tr("login_err_wrong_pwd"))
 
     st.stop()
+
 
 
 CURRENT_USER = ensure_authenticated()

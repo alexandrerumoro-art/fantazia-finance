@@ -1047,7 +1047,8 @@ def ensure_authenticated() -> str:
                 save_users(users)
                 # Sync user in DB (so DB storage works)
         if engine is not None:
-        db_create_user(username, pwd_hash, salt)
+            db_create_user(username, pwd_hash, salt)
+
 
                 st.session_state["user"] = username
                 msg.success(tr("login_ok_signup"))
@@ -1068,9 +1069,10 @@ def ensure_authenticated() -> str:
                     msg.error(tr("login_err_corrupt"))
                 else:
                     if hash_password(pwd, salt) == expected:
-                        # Ensure user exists in DB (so DB storage works)
-       if engine is not None:
-        db_create_user(username, expected, salt)
+                                                # Ensure user exists in DB (so DB storage works)
+                        if engine is not None:
+                            db_create_user(username, expected, salt)
+
 
                         st.session_state["user"] = username
                         msg.success(tr("login_ok_login"))
@@ -4190,4 +4192,3 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
-

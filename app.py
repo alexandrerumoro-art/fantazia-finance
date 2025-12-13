@@ -66,11 +66,19 @@ def migrate_json_to_db(engine):
     if engine is None:
         raise RuntimeError("engine est None (DB pas connectée)")
 
-    users_data = _read_json_file(USERS_FILE, {})
-    watch_data = _read_json_file(WATCHLIST_FILE, {})
-    alerts_data = _read_json_file(ALERTS_FILE, {})
-    notes_data = _read_json_file(NOTES_FILE, {})
-    news_data = _read_json_file(NEWS_SUB_FILE, {})
+    # Fallback si les constantes ne sont pas définies à cet endroit du code
+    users_path = globals().get("USERS_FILE", "users.json")
+    watch_path = globals().get("WATCHLIST_FILE", "watchlists.json")
+    alerts_path = globals().get("ALERTS_FILE", "alerts.json")
+    notes_path = globals().get("NOTES_FILE", "notes.json")
+    news_path = globals().get("NEWS_SUB_FILE", "news_subscriptions.json")
+
+    users_data = _read_json_file(users_path, {})
+    watch_data = _read_json_file(watch_path, {})
+    alerts_data = _read_json_file(alerts_path, {})
+    notes_data = _read_json_file(notes_path, {})
+    news_data = _read_json_file(news_path, {})
+
 
     # --- transaction ---
     with engine.begin() as conn:

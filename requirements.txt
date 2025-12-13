@@ -7,6 +7,7 @@ requests
 streamlit-autorefresh
 sqlalchemy==2.0.36
 psycopg[binary]
+reportlab
 
 
 

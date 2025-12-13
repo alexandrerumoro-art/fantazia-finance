@@ -13,28 +13,34 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import streamlit as st
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = st.secrets.get("DATABASE_URL") or st.secrets.get("DB_URL", "")
-
-# Supabase recommande SSL (souvent nécessaire)
-if DATABASE_URL and "sslmode=" not in DATABASE_URL:
-    DATABASE_URL += ("&" if "?" in DATABASE_URL else "?") + "sslmode=require"
+DB_URL = st.secrets.get("DATABASE_URL") or st.secrets.get("DB_URL") or ""
 
 @st.cache_resource
 def get_engine():
-    if not DATABASE_URL:
+    if not DB_URL:
         return None
-    return create_engine(DATABASE_URL, pool_pre_ping=True)
+    return create_engine(DB_URL, pool_pre_ping=True)
 
-engine = get_engine()
-def init_db(engine):
-    if engine is None:
-        return
-    with engine.begin() as conn:
-        conn.execute(text("""SELECT 1"""))  # simple ping
+# --- DEBUG DB (TOUJOURS visible) ---
+with st.sidebar.expander("🛠️ DEBUG DB", expanded=False):
+    st.write("Secrets keys:", list(st.secrets.keys()))
+    st.write("DB_URL set:", bool(DB_URL))
 
-init_db(engine)
+    if st.button("Test DB connection"):
+        engine = get_engine()
+        if engine is None:
+            st.error("DB_URL / DATABASE_URL manquant dans st.secrets")
+        else:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                st.success("✅ DB connectée")
+            except Exception as e:
+                st.error(f"❌ DB KO: {e}")
+
 
 
 
@@ -3884,3 +3890,4 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
+

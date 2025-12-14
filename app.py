@@ -36,18 +36,245 @@ def get_engine():
 
 engine = get_engine()
 
-# DEBUG
-if st.sidebar.checkbox("DEBUG DB", value=False):
+
+# =========================================================
+# MIGRATION JSON -> POSTGRES (SUPABASE)  [ONE SHOT]
+# =========================================================
+def _read_json_file(path: str, default):
+    try:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return default
+
+
+def migrate_json_to_db(engine):
     if engine is None:
-        st.sidebar.error("DB_URL manquant")
-        st.sidebar.write("Clés disponibles :", list(st.secrets.keys()))
-    else:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            st.sidebar.success("✅ DB connectée")
-        except Exception as e:
-            st.sidebar.error(f"❌ DB KO: {e}")
+        raise RuntimeError("engine est None (DB pas connectée)")
+
+    # Fallback si les constantes ne sont pas définies à cet endroit du code
+    users_path = globals().get("USERS_FILE", "users.json")
+    watch_path = globals().get("WATCHLIST_FILE", "watchlists.json")
+    alerts_path = globals().get("ALERTS_FILE", "alerts.json")
+    notes_path = globals().get("NOTES_FILE", "notes.json")
+    news_path = globals().get("NEWS_SUB_FILE", "news_subscriptions.json")
+
+    users_data = _read_json_file(users_path, {})
+    watch_data = _read_json_file(watch_path, {})
+    alerts_data = _read_json_file(alerts_path, {})
+    notes_data = _read_json_file(notes_path, {})
+    news_data = _read_json_file(news_path, {})
+
+
+    # --- transaction ---
+    with engine.begin() as conn:
+
+        # 1) USERS
+        if isinstance(users_data, dict):
+            for username, rec in users_data.items():
+                if not isinstance(rec, dict):
+                    continue
+                u = str(username).strip().lower()
+                ph = str(rec.get("password_hash", "")).strip()
+                salt = str(rec.get("salt", "")).strip()
+                if not u or not ph or not salt:
+                    continue
+                conn.execute(
+                    text("""
+                        insert into app_users (username, password_hash, salt)
+                        values (:u, :ph, :salt)
+                        on conflict (username) do update
+                        set password_hash = excluded.password_hash,
+                            salt = excluded.salt
+                    """),
+                    {"u": u, "ph": ph, "salt": salt}
+                )
+
+        # 2) WATCHLISTS + ITEMS
+        # attendu: { "user": { "wl_name": ["AAPL","MSFT"] } }
+        # fallback: { "wl_name": ["AAPL"] } -> on met sous "legacy"
+        if isinstance(watch_data, dict):
+            is_nested = any(isinstance(v, dict) for v in watch_data.values())
+            if not is_nested and all(isinstance(v, list) for v in watch_data.values()):
+                watch_data = {"legacy": watch_data}
+
+            for username, wls in watch_data.items():
+                u = str(username).strip().lower()
+                if not u or not isinstance(wls, dict):
+                    continue
+
+                # s'assure que l'utilisateur existe
+                conn.execute(
+                    text("""
+                        insert into app_users (username, password_hash, salt)
+                        values (:u, '', '')
+                        on conflict (username) do nothing
+                    """),
+                    {"u": u}
+                )
+
+                for wl_name, tickers in wls.items():
+                    name = str(wl_name).strip()
+                    if not name or not isinstance(tickers, list):
+                        continue
+
+                    # crée/merge la watchlist et récupère l'id
+                    wl_id = conn.execute(
+                        text("""
+                            insert into watchlists (username, name)
+                            values (:u, :name)
+                            on conflict (username, name) do update
+                            set name = excluded.name
+                            returning id
+                        """),
+                        {"u": u, "name": name}
+                    ).scalar()
+
+                    if not wl_id:
+                        # secours
+                        wl_id = conn.execute(
+                            text("select id from watchlists where username=:u and name=:name"),
+                            {"u": u, "name": name}
+                        ).scalar()
+
+                    # items
+                    pos = 1
+                    for t in tickers:
+                        tk = str(t).upper().strip()
+                        if not tk:
+                            continue
+                        conn.execute(
+                            text("""
+                                insert into watchlist_items (watchlist_id, ticker, position)
+                                values (:wid, :tk, :pos)
+                                on conflict (watchlist_id, ticker) do update
+                                set position = excluded.position
+                            """),
+                            {"wid": wl_id, "tk": tk, "pos": pos}
+                        )
+                        pos += 1
+
+        # 3) ALERTS
+        # attendu: { "user": [ {"ticker":"AAPL","kind":"pct","cmp":"le","threshold":-3.0}, ... ] }
+        if isinstance(alerts_data, dict):
+            seen = set()
+            for username, arr in alerts_data.items():
+                u = str(username).strip().lower()
+                if not u or not isinstance(arr, list):
+                    continue
+
+                conn.execute(
+                    text("""
+                        insert into app_users (username, password_hash, salt)
+                        values (:u, '', '')
+                        on conflict (username) do nothing
+                    """),
+                    {"u": u}
+                )
+
+                for a in arr:
+                    if not isinstance(a, dict):
+                        continue
+                    tk = str(a.get("ticker", "")).upper().strip()
+                    kind = str(a.get("kind", "")).strip()
+                    cmp_ = str(a.get("cmp", "")).strip()
+                    thr = a.get("threshold", None)
+                    if not tk or kind not in ("pct", "price") or cmp_ not in ("le", "ge"):
+                        continue
+                    try:
+                        thr = float(thr)
+                    except Exception:
+                        continue
+
+                    key = (u, tk, kind, cmp_, thr)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+
+                    conn.execute(
+                        text("""
+                            insert into alerts (username, ticker, kind, cmp, threshold)
+                            values (:u, :tk, :kind, :cmp, :thr)
+                        """),
+                        {"u": u, "tk": tk, "kind": kind, "cmp": cmp_, "thr": thr}
+                    )
+
+        # 4) NOTES
+        # attendu: { "user": { "AAPL": "ma note", ... } }
+        if isinstance(notes_data, dict):
+            for username, mp in notes_data.items():
+                u = str(username).strip().lower()
+                if not u or not isinstance(mp, dict):
+                    continue
+
+                conn.execute(
+                    text("""
+                        insert into app_users (username, password_hash, salt)
+                        values (:u, '', '')
+                        on conflict (username) do nothing
+                    """),
+                    {"u": u}
+                )
+
+                for ticker, note in mp.items():
+                    tk = str(ticker).upper().strip()
+                    nt = str(note) if note is not None else ""
+                    if not tk:
+                        continue
+                    conn.execute(
+                        text("""
+                            insert into notes (username, ticker, note)
+                            values (:u, :tk, :nt)
+                            on conflict (username, ticker) do update
+                            set note = excluded.note,
+                                updated_at = now()
+                        """),
+                        {"u": u, "tk": tk, "nt": nt}
+                    )
+
+        # 5) NEWS SUBSCRIPTIONS
+        # attendu: { "user": ["AAPL","MSFT"] }
+        if isinstance(news_data, dict):
+            for username, subs in news_data.items():
+                u = str(username).strip().lower()
+                if not u or not isinstance(subs, list):
+                    continue
+
+                conn.execute(
+                    text("""
+                        insert into app_users (username, password_hash, salt)
+                        values (:u, '', '')
+                        on conflict (username) do nothing
+                    """),
+                    {"u": u}
+                )
+
+                for t in subs:
+                    tk = str(t).upper().strip()
+                    if not tk:
+                        continue
+                    conn.execute(
+                        text("""
+                            insert into news_subscriptions (username, ticker)
+                            values (:u, :tk)
+                            on conflict (username, ticker) do nothing
+                        """),
+                        {"u": u, "tk": tk}
+                    )
+
+    # petit résumé (counts)
+    with engine.connect() as conn:
+        counts = {
+            "app_users": conn.execute(text("select count(*) from app_users")).scalar(),
+            "watchlists": conn.execute(text("select count(*) from watchlists")).scalar(),
+            "watchlist_items": conn.execute(text("select count(*) from watchlist_items")).scalar(),
+            "alerts": conn.execute(text("select count(*) from alerts")).scalar(),
+            "notes": conn.execute(text("select count(*) from notes")).scalar(),
+            "news_subscriptions": conn.execute(text("select count(*) from news_subscriptions")).scalar(),
+        }
+    return counts
 
 
 
@@ -720,11 +947,34 @@ seed_file_from_b64(WATCHLIST_FILE, WATCHLISTS_JSON_B64, {})
 seed_file_from_b64(ALERTS_FILE, ALERTS_JSON_B64, {})
 seed_file_from_b64(NOTES_FILE, NOTES_JSON_B64, {})
 seed_file_from_b64(NEWS_SUB_FILE, NEWS_SUBSCRIPTIONS_JSON_B64, {})
+# =========================================================
+# DB FIRST (fallback JSON)
+# =========================================================
+def _db_ok() -> bool:
+    return engine is not None
 
 # =========================================================
-# USERS
+# USERS (DB first, fallback JSON)
 # =========================================================
 def load_users() -> Dict[str, Dict[str, str]]:
+    if _db_ok():
+        try:
+            with engine.connect() as conn:
+                rows = conn.execute(
+                    text("select username, password_hash, salt from app_users")
+                ).fetchall()
+            out: Dict[str, Dict[str, str]] = {}
+            for u, ph, s in rows:
+                if not u:
+                    continue
+                out[str(u).strip().lower()] = {
+                    "password_hash": str(ph or ""),
+                    "salt": str(s or ""),
+                }
+            return out
+        except Exception:
+            pass
+
     if not os.path.exists(USERS_FILE):
         return {}
     try:
@@ -736,6 +986,31 @@ def load_users() -> Dict[str, Dict[str, str]]:
 
 
 def save_users(users: Dict[str, Dict[str, str]]) -> None:
+    if _db_ok():
+        try:
+            with engine.begin() as conn:
+                for username, rec in (users or {}).items():
+                    if not isinstance(rec, dict):
+                        continue
+                    u = str(username).strip().lower()
+                    ph = str(rec.get("password_hash", "")).strip()
+                    salt = str(rec.get("salt", "")).strip()
+                    if not u:
+                        continue
+                    conn.execute(
+                        text("""
+                            insert into app_users (username, password_hash, salt)
+                            values (:u, :ph, :salt)
+                            on conflict (username) do update
+                            set password_hash = excluded.password_hash,
+                                salt = excluded.salt
+                        """),
+                        {"u": u, "ph": ph, "salt": salt},
+                    )
+            return
+        except Exception:
+            pass
+
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
 
@@ -807,6 +1082,147 @@ def ensure_authenticated() -> str:
                         msg.error(tr("login_err_wrong_pwd"))
 
     st.stop()
+# =========================================================
+# DB AUTH OVERRIDE (Postgres/Supabase) — fallback JSON safe
+# À coller JUSTE AVANT: CURRENT_USER = ensure_authenticated()
+# =========================================================
+
+# On garde l'ancienne version (JSON) en secours
+_ensure_authenticated_json = ensure_authenticated
+
+
+def _db_get_user_record(username: str) -> Optional[Dict[str, str]]:
+    """Retourne {"password_hash": ..., "salt": ...} ou None."""
+    if engine is None:
+        return None
+    u = (username or "").strip().lower()
+    if not u:
+        return None
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                text("""
+                    select password_hash, salt
+                    from app_users
+                    where username = :u
+                    limit 1
+                """),
+                {"u": u},
+            ).mappings().first()
+        if not row:
+            return None
+        return {
+            "password_hash": str(row.get("password_hash", "") or ""),
+            "salt": str(row.get("salt", "") or ""),
+        }
+    except Exception:
+        return None
+
+
+def _db_user_exists(username: str) -> bool:
+    return _db_get_user_record(username) is not None
+
+
+def _db_create_user(username: str, password_hash: str, salt: str) -> bool:
+    if engine is None:
+        return False
+    u = (username or "").strip().lower()
+    ph = str(password_hash or "").strip()
+    s = str(salt or "").strip()
+    if not u or not ph or not s:
+        return False
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("""
+                    insert into app_users (username, password_hash, salt)
+                    values (:u, :ph, :s)
+                    on conflict (username) do nothing
+                """),
+                {"u": u, "ph": ph, "s": s},
+            )
+        return True
+    except Exception:
+        return False
+
+
+def ensure_authenticated() -> str:
+    # Si déjà loggé
+    if "user" in st.session_state and st.session_state["user"]:
+        return st.session_state["user"]
+
+    # Si pas de DB, on retombe sur ton système JSON d'origine
+    if engine is None:
+        return _ensure_authenticated_json()
+
+    # --- UI login/signup identique en esprit à ton flow ---
+    st.title(tr("login_title"))
+    st.write(tr("login_subtitle"))
+
+    mode = st.radio(
+        "",
+        [tr("login_mode_login"), tr("login_mode_signup")],
+        horizontal=True,
+    )
+
+    username_input = st.text_input(tr("login_username"))
+    password_input = st.text_input(tr("login_password"), type="password")
+    msg = st.empty()
+
+    if mode == tr("login_mode_signup"):
+        password_confirm = st.text_input(tr("login_password_confirm"), type="password")
+        if st.button(tr("login_btn_signup")):
+            username = (username_input or "").strip().lower()
+            pwd = password_input or ""
+            pwd2 = password_confirm or ""
+
+            if not username or len(username) < 3:
+                msg.error(tr("login_err_short_user"))
+            elif _db_user_exists(username):
+                msg.error(tr("login_err_exists"))
+            elif not pwd or len(pwd) < 6:
+                msg.error(tr("login_err_short_pwd"))
+            elif pwd != pwd2:
+                msg.error(tr("login_err_pwd_mismatch"))
+            else:
+                salt = secrets.token_hex(16)
+                pwd_hash = hash_password(pwd, salt)
+
+                ok = _db_create_user(username, pwd_hash, salt)
+                if not ok:
+                    # Si DB refuse, fallback JSON (sans te bloquer)
+                    return _ensure_authenticated_json()
+
+                st.session_state["user"] = username
+                msg.success(tr("login_ok_signup"))
+                rerun_app()
+
+    else:
+        if st.button(tr("login_btn_login")):
+            username = (username_input or "").strip().lower()
+            pwd = password_input or ""
+
+            if not username or not pwd:
+                msg.error(tr("login_err_missing"))
+            else:
+                rec = _db_get_user_record(username)
+                if not rec:
+                    msg.error(tr("login_err_not_found"))
+                else:
+                    salt = rec.get("salt", "")
+                    expected = rec.get("password_hash", "")
+                    if not salt or not expected:
+                        # arrive si user créé "vide" pendant migration/seed
+                        msg.error(tr("login_err_corrupt"))
+                    else:
+                        if hash_password(pwd, salt) == expected:
+                            st.session_state["user"] = username
+                            msg.success(tr("login_ok_login"))
+                            rerun_app()
+                        else:
+                            msg.error(tr("login_err_wrong_pwd"))
+
+    st.stop()
 
 
 CURRENT_USER = ensure_authenticated()
@@ -848,9 +1264,35 @@ def load_config() -> Dict:
 
 
 # =========================================================
-# WATCHLISTS
+# WATCHLISTS (DB first, fallback JSON)
 # =========================================================
 def load_watchlists(user: str) -> Dict[str, List[str]]:
+    u = str(user).strip().lower()
+
+    if _db_ok():
+        try:
+            with engine.connect() as conn:
+                wls = conn.execute(
+                    text("select id, name from watchlists where username=:u order by name"),
+                    {"u": u},
+                ).fetchall()
+
+                out: Dict[str, List[str]] = {}
+                for wl_id, name in wls:
+                    items = conn.execute(
+                        text("""
+                            select ticker
+                            from watchlist_items
+                            where watchlist_id=:wid
+                            order by position asc, ticker asc
+                        """),
+                        {"wid": wl_id},
+                    ).fetchall()
+                    out[str(name)] = [str(t[0]).upper().strip() for t in items if t and str(t[0]).strip()]
+                return out
+        except Exception:
+            pass
+
     if not os.path.exists(WATCHLIST_FILE):
         return {}
     try:
@@ -859,8 +1301,8 @@ def load_watchlists(user: str) -> Dict[str, List[str]]:
     except Exception:
         return {}
     if isinstance(data, dict):
-        if user in data and isinstance(data[user], dict):
-            base = data[user]
+        if u in data and isinstance(data[u], dict):
+            base = data[u]
         elif all(isinstance(v, list) for v in data.values()):
             base = data
         else:
@@ -870,11 +1312,65 @@ def load_watchlists(user: str) -> Dict[str, List[str]]:
     clean = {}
     for name, vals in base.items():
         if isinstance(vals, list):
-            clean[name] = [str(x).upper().strip() for x in vals if str(x).strip()]
+            clean[str(name)] = [str(x).upper().strip() for x in vals if str(x).strip()]
     return clean
 
 
+
 def save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
+    u = str(user).strip().lower()
+    wl = wl or {}
+
+    if _db_ok():
+        try:
+            with engine.begin() as conn:
+                existing = conn.execute(
+                    text("select id from watchlists where username=:u"),
+                    {"u": u},
+                ).fetchall()
+                existing_ids = [int(r[0]) for r in existing] if existing else []
+
+                if existing_ids:
+                    conn.execute(
+                        text("delete from watchlist_items where watchlist_id = any(:ids)"),
+                        {"ids": existing_ids},
+                    )
+                conn.execute(
+                    text("delete from watchlists where username=:u"),
+                    {"u": u},
+                )
+
+                for name, tickers in wl.items():
+                    name_clean = str(name).strip()
+                    if not name_clean:
+                        continue
+                    tickers = tickers if isinstance(tickers, list) else []
+                    wl_id = conn.execute(
+                        text("""
+                            insert into watchlists (username, name)
+                            values (:u, :name)
+                            returning id
+                        """),
+                        {"u": u, "name": name_clean},
+                    ).scalar()
+
+                    pos = 1
+                    for t in tickers:
+                        tk = str(t).upper().strip()
+                        if not tk:
+                            continue
+                        conn.execute(
+                            text("""
+                                insert into watchlist_items (watchlist_id, ticker, position)
+                                values (:wid, :tk, :pos)
+                            """),
+                            {"wid": wl_id, "tk": tk, "pos": pos},
+                        )
+                        pos += 1
+            return
+        except Exception:
+            pass
+
     data = {}
     if os.path.exists(WATCHLIST_FILE):
         try:
@@ -884,7 +1380,7 @@ def save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
                 data = tmp
         except Exception:
             data = {}
-    data[user] = wl
+    data[u] = wl
     with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -894,9 +1390,27 @@ def parse_tickers(text: str) -> List[str]:
 
 
 # =========================================================
-# NEWS SUBSCRIPTIONS
+# NEWS SUBSCRIPTIONS (DB first, fallback JSON)
 # =========================================================
 def load_news_subscriptions(user: str) -> List[str]:
+    u = str(user).strip().lower()
+
+    if _db_ok():
+        try:
+            with engine.connect() as conn:
+                rows = conn.execute(
+                    text("""
+                        select ticker
+                        from news_subscriptions
+                        where username=:u
+                        order by ticker
+                    """),
+                    {"u": u},
+                ).fetchall()
+            return sorted(list({str(r[0]).upper().strip() for r in rows if r and str(r[0]).strip()}))
+        except Exception:
+            pass
+
     if not os.path.exists(NEWS_SUB_FILE):
         return []
     try:
@@ -906,14 +1420,36 @@ def load_news_subscriptions(user: str) -> List[str]:
         return []
     if not isinstance(data, dict):
         return []
-    subs = data.get(user, [])
+    subs = data.get(u, [])
     if not isinstance(subs, list):
         return []
     return sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
 
 
 def save_news_subscriptions(user: str, subs: List[str]) -> None:
-    clean = sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
+    u = str(user).strip().lower()
+    clean = sorted(list({str(t).upper().strip() for t in (subs or []) if str(t).strip()}))
+
+    if _db_ok():
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("delete from news_subscriptions where username=:u"),
+                    {"u": u},
+                )
+                for tk in clean:
+                    conn.execute(
+                        text("""
+                            insert into news_subscriptions (username, ticker)
+                            values (:u, :tk)
+                            on conflict (username, ticker) do nothing
+                        """),
+                        {"u": u, "tk": tk},
+                    )
+            return
+        except Exception:
+            pass
+
     data = {}
     if os.path.exists(NEWS_SUB_FILE):
         try:
@@ -923,15 +1459,47 @@ def save_news_subscriptions(user: str, subs: List[str]) -> None:
                 data = tmp
         except Exception:
             data = {}
-    data[user] = clean
+    data[u] = clean
     with open(NEWS_SUB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 # =========================================================
-# ALERTS
+# ALERTS (DB first, fallback JSON)
 # =========================================================
 def load_alerts(user: str) -> List[Dict]:
+    u = str(user).strip().lower()
+
+    if _db_ok():
+        try:
+            with engine.connect() as conn:
+                rows = conn.execute(
+                    text("""
+                        select ticker, kind, cmp, threshold
+                        from alerts
+                        where username=:u
+                        order by id asc
+                    """),
+                    {"u": u},
+                ).fetchall()
+            out = []
+            for tk, kind, cmp_, thr in rows:
+                if not tk:
+                    continue
+                out.append({
+                    "ticker": str(tk).upper().strip(),
+                    "kind": str(kind).strip(),
+                    "cmp": str(cmp_).strip(),
+                    "threshold": float(thr) if thr is not None else None,
+                })
+            clean_alerts = []
+            for a in out:
+                if isinstance(a, dict) and "ticker" in a and "kind" in a and "cmp" in a and "threshold" in a:
+                    clean_alerts.append(a)
+            return clean_alerts
+        except Exception:
+            pass
+
     if not os.path.exists(ALERTS_FILE):
         return []
     try:
@@ -941,7 +1509,7 @@ def load_alerts(user: str) -> List[Dict]:
         return []
     if not isinstance(data, dict):
         return []
-    alerts = data.get(user, [])
+    alerts = data.get(u, [])
     if not isinstance(alerts, list):
         return []
     clean_alerts = []
@@ -952,6 +1520,37 @@ def load_alerts(user: str) -> List[Dict]:
 
 
 def save_alerts(user: str, alerts: List[Dict]) -> None:
+    u = str(user).strip().lower()
+    alerts = alerts or []
+
+    if _db_ok():
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("delete from alerts where username=:u"), {"u": u})
+                for a in alerts:
+                    if not isinstance(a, dict):
+                        continue
+                    tk = str(a.get("ticker", "")).upper().strip()
+                    kind = str(a.get("kind", "")).strip()
+                    cmp_ = str(a.get("cmp", "")).strip()
+                    thr = a.get("threshold", None)
+                    if not tk or kind not in ("pct", "price") or cmp_ not in ("le", "ge"):
+                        continue
+                    try:
+                        thr = float(thr)
+                    except Exception:
+                        continue
+                    conn.execute(
+                        text("""
+                            insert into alerts (username, ticker, kind, cmp, threshold)
+                            values (:u, :tk, :kind, :cmp, :thr)
+                        """),
+                        {"u": u, "tk": tk, "kind": kind, "cmp": cmp_, "thr": thr},
+                    )
+            return
+        except Exception:
+            pass
+
     data = {}
     if os.path.exists(ALERTS_FILE):
         try:
@@ -961,15 +1560,33 @@ def save_alerts(user: str, alerts: List[Dict]) -> None:
                 data = tmp
         except Exception:
             data = {}
-    data[user] = alerts
+    data[u] = alerts
     with open(ALERTS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 # =========================================================
-# NOTES PERSO
+# NOTES (DB first, fallback JSON)
 # =========================================================
 def load_notes(user: str) -> Dict[str, str]:
+    u = str(user).strip().lower()
+
+    if _db_ok():
+        try:
+            with engine.connect() as conn:
+                rows = conn.execute(
+                    text("""
+                        select ticker, note
+                        from notes
+                        where username=:u
+                        order by ticker
+                    """),
+                    {"u": u},
+                ).fetchall()
+            return {str(tk).upper().strip(): str(nt or "") for tk, nt in rows if tk and str(tk).strip()}
+        except Exception:
+            pass
+
     if not os.path.exists(NOTES_FILE):
         return {}
     try:
@@ -979,13 +1596,37 @@ def load_notes(user: str) -> Dict[str, str]:
         return {}
     if not isinstance(data, dict):
         return {}
-    user_notes = data.get(user, {})
+    user_notes = data.get(u, {})
     if not isinstance(user_notes, dict):
         return {}
     return {str(k).upper(): str(v) for k, v in user_notes.items()}
 
 
+
 def save_notes(user: str, notes: Dict[str, str]) -> None:
+    u = str(user).strip().lower()
+    notes = notes or {}
+    clean = {str(k).upper().strip(): str(v) for k, v in notes.items() if str(k).strip()}
+
+    if _db_ok():
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("delete from notes where username=:u"), {"u": u})
+                for tk, nt in clean.items():
+                    conn.execute(
+                        text("""
+                            insert into notes (username, ticker, note)
+                            values (:u, :tk, :nt)
+                            on conflict (username, ticker) do update
+                            set note = excluded.note,
+                                updated_at = now()
+                        """),
+                        {"u": u, "tk": tk, "nt": nt},
+                    )
+            return
+        except Exception:
+            pass
+
     data = {}
     if os.path.exists(NOTES_FILE):
         try:
@@ -995,10 +1636,400 @@ def save_notes(user: str, notes: Dict[str, str]) -> None:
                 data = tmp
         except Exception:
             data = {}
-    clean = {str(k).upper(): str(v) for k, v in notes.items() if str(k).strip()}
-    data[user] = clean
+    data[u] = clean
     with open(NOTES_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+# =========================================================
+# DB STORAGE OVERRIDE (watchlists / alerts / notes / news subs)
+# Fallback JSON si DB absente/KO
+# À coller JUSTE APRÈS save_notes(...) et AVANT format_price_with_currency
+# =========================================================
+
+# --- on garde les versions JSON d'origine en secours ---
+_load_watchlists_json = load_watchlists
+_save_watchlists_json = save_watchlists
+
+_load_alerts_json = load_alerts
+_save_alerts_json = save_alerts
+
+_load_notes_json = load_notes
+_save_notes_json = save_notes
+
+_load_news_subs_json = load_news_subscriptions
+_save_news_subs_json = save_news_subscriptions
+
+
+def _db_ready() -> bool:
+    return engine is not None
+
+
+def _db_ensure_user(username: str) -> None:
+    """Crée l'utilisateur en DB si besoin (seed), sans écraser le hash/salt existants."""
+    if not _db_ready():
+        return
+    u = (username or "").strip().lower()
+    if not u:
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("""
+                    insert into app_users (username, password_hash, salt)
+                    values (:u, '', '')
+                    on conflict (username) do nothing
+                """),
+                {"u": u},
+            )
+    except Exception:
+        # On n'empêche pas l'app de tourner
+        return
+
+
+# ---------------------------
+# WATCHLISTS (DB)
+# ---------------------------
+def _db_load_watchlists(user: str) -> Dict[str, List[str]]:
+    u = (user or "").strip().lower()
+    if not u:
+        return {}
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("""
+                    select w.name as name, i.ticker as ticker
+                    from watchlists w
+                    left join watchlist_items i on i.watchlist_id = w.id
+                    where w.username = :u
+                    order by w.name asc, i.position asc nulls last
+                """),
+                {"u": u},
+            ).mappings().all()
+
+        out: Dict[str, List[str]] = {}
+        for r in rows:
+            name = str(r.get("name", "") or "").strip()
+            tk = r.get("ticker", None)
+            if not name:
+                continue
+            out.setdefault(name, [])
+            if tk is not None and str(tk).strip():
+                out[name].append(str(tk).upper().strip())
+
+        # Nettoyage (au cas où)
+        clean: Dict[str, List[str]] = {}
+        for name, vals in out.items():
+            clean[name] = [str(x).upper().strip() for x in vals if str(x).strip()]
+        return clean
+    except Exception:
+        # fallback JSON
+        return _load_watchlists_json(user)
+
+
+def _db_save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
+    u = (user or "").strip().lower()
+    if not u:
+        return
+    _db_ensure_user(u)
+
+    try:
+        # Normaliser
+        clean_wl: Dict[str, List[str]] = {}
+        if isinstance(wl, dict):
+            for name, tickers in wl.items():
+                nm = str(name).strip()
+                if not nm:
+                    continue
+                if isinstance(tickers, list):
+                    clean_wl[nm] = [str(t).upper().strip() for t in tickers if str(t).strip()]
+                else:
+                    clean_wl[nm] = []
+
+        with engine.begin() as conn:
+            # delete items puis watchlists (pour ce user)
+            conn.execute(
+                text("""
+                    delete from watchlist_items
+                    where watchlist_id in (select id from watchlists where username = :u)
+                """),
+                {"u": u},
+            )
+            conn.execute(
+                text("delete from watchlists where username = :u"),
+                {"u": u},
+            )
+
+            # recrée tout
+            for wl_name, tickers in clean_wl.items():
+                wl_id = conn.execute(
+                    text("""
+                        insert into watchlists (username, name)
+                        values (:u, :name)
+                        returning id
+                    """),
+                    {"u": u, "name": wl_name},
+                ).scalar()
+
+                if not wl_id:
+                    continue
+
+                pos = 1
+                for t in tickers:
+                    tk = str(t).upper().strip()
+                    if not tk:
+                        continue
+                    conn.execute(
+                        text("""
+                            insert into watchlist_items (watchlist_id, ticker, position)
+                            values (:wid, :tk, :pos)
+                        """),
+                        {"wid": wl_id, "tk": tk, "pos": pos},
+                    )
+                    pos += 1
+    except Exception:
+        # fallback JSON
+        _save_watchlists_json(user, wl)
+
+
+# ---------------------------
+# ALERTS (DB)
+# ---------------------------
+def _db_load_alerts(user: str) -> List[Dict]:
+    u = (user or "").strip().lower()
+    if not u:
+        return []
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("""
+                    select ticker, kind, cmp, threshold
+                    from alerts
+                    where username = :u
+                    order by id asc
+                """),
+                {"u": u},
+            ).mappings().all()
+
+        out: List[Dict] = []
+        for r in rows:
+            tk = str(r.get("ticker", "") or "").upper().strip()
+            kind = str(r.get("kind", "") or "").strip()
+            cmp_ = str(r.get("cmp", "") or "").strip()
+            thr = r.get("threshold", None)
+            try:
+                thr_f = float(thr)
+            except Exception:
+                continue
+            if not tk or kind not in ("pct", "price") or cmp_ not in ("le", "ge"):
+                continue
+            out.append({"ticker": tk, "kind": kind, "cmp": cmp_, "threshold": thr_f})
+        return out
+    except Exception:
+        return _load_alerts_json(user)
+
+
+def _db_save_alerts(user: str, alerts: List[Dict]) -> None:
+    u = (user or "").strip().lower()
+    if not u:
+        return
+    _db_ensure_user(u)
+
+    # Normaliser
+    clean: List[Dict] = []
+    if isinstance(alerts, list):
+        for a in alerts:
+            if not isinstance(a, dict):
+                continue
+            tk = str(a.get("ticker", "")).upper().strip()
+            kind = str(a.get("kind", "")).strip()
+            cmp_ = str(a.get("cmp", "")).strip()
+            thr = a.get("threshold", None)
+            try:
+                thr_f = float(thr)
+            except Exception:
+                continue
+            if not tk or kind not in ("pct", "price") or cmp_ not in ("le", "ge"):
+                continue
+            clean.append({"ticker": tk, "kind": kind, "cmp": cmp_, "threshold": thr_f})
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("delete from alerts where username = :u"), {"u": u})
+            for a in clean:
+                conn.execute(
+                    text("""
+                        insert into alerts (username, ticker, kind, cmp, threshold)
+                        values (:u, :tk, :kind, :cmp, :thr)
+                    """),
+                    {"u": u, "tk": a["ticker"], "kind": a["kind"], "cmp": a["cmp"], "thr": a["threshold"]},
+                )
+    except Exception:
+        _save_alerts_json(user, alerts)
+
+
+# ---------------------------
+# NOTES (DB)
+# ---------------------------
+def _db_load_notes(user: str) -> Dict[str, str]:
+    u = (user or "").strip().lower()
+    if not u:
+        return {}
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("""
+                    select ticker, note
+                    from notes
+                    where username = :u
+                    order by ticker asc
+                """),
+                {"u": u},
+            ).mappings().all()
+
+        out: Dict[str, str] = {}
+        for r in rows:
+            tk = str(r.get("ticker", "") or "").upper().strip()
+            nt = r.get("note", "")
+            if tk:
+                out[tk] = "" if nt is None else str(nt)
+        return out
+    except Exception:
+        return _load_notes_json(user)
+
+
+def _db_save_notes(user: str, notes: Dict[str, str]) -> None:
+    u = (user or "").strip().lower()
+    if not u:
+        return
+    _db_ensure_user(u)
+
+    clean: Dict[str, str] = {}
+    if isinstance(notes, dict):
+        for k, v in notes.items():
+            tk = str(k).upper().strip()
+            if not tk:
+                continue
+            clean[tk] = "" if v is None else str(v)
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("delete from notes where username = :u"), {"u": u})
+            for tk, nt in clean.items():
+                conn.execute(
+                    text("""
+                        insert into notes (username, ticker, note)
+                        values (:u, :tk, :nt)
+                    """),
+                    {"u": u, "tk": tk, "nt": nt},
+                )
+    except Exception:
+        _save_notes_json(user, notes)
+
+
+# ---------------------------
+# NEWS SUBSCRIPTIONS (DB)
+# ---------------------------
+def _db_load_news_subscriptions(user: str) -> List[str]:
+    u = (user or "").strip().lower()
+    if not u:
+        return []
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text("""
+                    select ticker
+                    from news_subscriptions
+                    where username = :u
+                    order by ticker asc
+                """),
+                {"u": u},
+            ).mappings().all()
+
+        subs = []
+        for r in rows:
+            tk = str(r.get("ticker", "") or "").upper().strip()
+            if tk:
+                subs.append(tk)
+        # unique + tri
+        return sorted(list(set(subs)))
+    except Exception:
+        return _load_news_subs_json(user)
+
+
+def _db_save_news_subscriptions(user: str, subs: List[str]) -> None:
+    u = (user or "").strip().lower()
+    if not u:
+        return
+    _db_ensure_user(u)
+
+    clean = []
+    if isinstance(subs, list):
+        clean = sorted(list({str(t).upper().strip() for t in subs if str(t).strip()}))
+
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("delete from news_subscriptions where username = :u"), {"u": u})
+            for tk in clean:
+                conn.execute(
+                    text("""
+                        insert into news_subscriptions (username, ticker)
+                        values (:u, :tk)
+                        on conflict (username, ticker) do nothing
+                    """),
+                    {"u": u, "tk": tk},
+                )
+    except Exception:
+        _save_news_subs_json(user, subs)
+
+
+# =========================================================
+# OVERRIDE DES FONCTIONS PUBLIQUES (sans toucher le reste)
+# =========================================================
+def load_watchlists(user: str) -> Dict[str, List[str]]:
+    if not _db_ready():
+        return _load_watchlists_json(user)
+    return _db_load_watchlists(user)
+
+
+def save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
+    if not _db_ready():
+        return _save_watchlists_json(user, wl)
+    return _db_save_watchlists(user, wl)
+
+
+def load_alerts(user: str) -> List[Dict]:
+    if not _db_ready():
+        return _load_alerts_json(user)
+    return _db_load_alerts(user)
+
+
+def save_alerts(user: str, alerts: List[Dict]) -> None:
+    if not _db_ready():
+        return _save_alerts_json(user, alerts)
+    return _db_save_alerts(user, alerts)
+
+
+def load_notes(user: str) -> Dict[str, str]:
+    if not _db_ready():
+        return _load_notes_json(user)
+    return _db_load_notes(user)
+
+
+def save_notes(user: str, notes: Dict[str, str]) -> None:
+    if not _db_ready():
+        return _save_notes_json(user, notes)
+    return _db_save_notes(user, notes)
+
+
+def load_news_subscriptions(user: str) -> List[str]:
+    if not _db_ready():
+        return _load_news_subs_json(user)
+    return _db_load_news_subscriptions(user)
+
+
+def save_news_subscriptions(user: str, subs: List[str]) -> None:
+    if not _db_ready():
+        return _save_news_subs_json(user, subs)
+    return _db_save_news_subscriptions(user, subs)
 
 # ---------------------------------------------------------
 # Prix + devise (pour affichage)
@@ -1615,13 +2646,7 @@ tickers = [t.upper() for t in tickers]
 if refresh_seconds and HAS_AUTOREFRESH:
     st_autorefresh(interval=refresh_seconds * 1000, key="auto_refresh_key")
 
-if st.sidebar.checkbox("DEBUG KEYS", value=False):
-    st.sidebar.write({
-        "TWELVE": bool(TWELVE_API_KEY),
-        "FINNHUB": bool(FINNHUB_API_KEY),
-        "ALPHAVANTAGE": bool(ALPHAVANTAGE_API_KEY),
-        "POLYGON": bool(POLYGON_API_KEY),
-    })
+
 
 # =========================================================
 # LOAD DATA
@@ -3898,4 +4923,3 @@ with tab6:
             st.markdown(final_msg)
         with st.chat_message("assistant"):
             st.markdown(answer)
-

@@ -1,0 +1,25 @@
+# Python / venv
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Local JSON data (NEVER COMMIT)
+users.json
+watchlists.json
+alerts.json
+notes.json
+news_subscriptions.json
+config.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log

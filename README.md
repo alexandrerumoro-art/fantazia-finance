@@ -6,13 +6,7 @@ App Streamlit d'analyse boursière : comparaison par secteur/watchlist, Fantazia
 
 
 
-\## Lancer en local
 
-```bash
-
-pip install -r requirements.txt
-
-streamlit run app.py
 
 
 

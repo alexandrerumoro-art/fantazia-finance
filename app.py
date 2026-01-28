@@ -1663,6 +1663,10 @@ def _db_ready() -> bool:
     return engine is not None
 
 
+def _db_enabled() -> bool:
+    return _db_ready() and not st.session_state.get("force_json_storage", False)
+
+
 def _db_ensure_user(username: str) -> None:
     """Crée l'utilisateur en DB si besoin (seed), sans écraser le hash/salt existants."""
     if not _db_ready():
@@ -1719,7 +1723,10 @@ def _db_load_watchlists(user: str) -> Dict[str, List[str]]:
         clean: Dict[str, List[str]] = {}
         for name, vals in out.items():
             clean[name] = [str(x).upper().strip() for x in vals if str(x).strip()]
-        return clean
+        if clean:
+            return clean
+        json_fallback = _load_watchlists_json(user)
+        return json_fallback if json_fallback else clean
     except Exception:
         # fallback JSON
         return _load_watchlists_json(user)
@@ -1787,6 +1794,7 @@ def _db_save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
                     pos += 1
     except Exception:
         # fallback JSON
+        st.session_state["force_json_storage"] = True
         _save_watchlists_json(user, wl)
 
 
@@ -1822,7 +1830,10 @@ def _db_load_alerts(user: str) -> List[Dict]:
             if not tk or kind not in ("pct", "price") or cmp_ not in ("le", "ge"):
                 continue
             out.append({"ticker": tk, "kind": kind, "cmp": cmp_, "threshold": thr_f})
-        return out
+        if out:
+            return out
+        json_fallback = _load_alerts_json(user)
+        return json_fallback if json_fallback else out
     except Exception:
         return _load_alerts_json(user)
 
@@ -1863,6 +1874,7 @@ def _db_save_alerts(user: str, alerts: List[Dict]) -> None:
                     {"u": u, "tk": a["ticker"], "kind": a["kind"], "cmp": a["cmp"], "thr": a["threshold"]},
                 )
     except Exception:
+        st.session_state["force_json_storage"] = True
         _save_alerts_json(user, alerts)
 
 
@@ -1985,49 +1997,49 @@ def _db_save_news_subscriptions(user: str, subs: List[str]) -> None:
 # OVERRIDE DES FONCTIONS PUBLIQUES (sans toucher le reste)
 # =========================================================
 def load_watchlists(user: str) -> Dict[str, List[str]]:
-    if not _db_ready():
+    if not _db_enabled():
         return _load_watchlists_json(user)
     return _db_load_watchlists(user)
 
 
 def save_watchlists(user: str, wl: Dict[str, List[str]]) -> None:
-    if not _db_ready():
+    if not _db_enabled():
         return _save_watchlists_json(user, wl)
     return _db_save_watchlists(user, wl)
 
 
 def load_alerts(user: str) -> List[Dict]:
-    if not _db_ready():
+    if not _db_enabled():
         return _load_alerts_json(user)
     return _db_load_alerts(user)
 
 
 def save_alerts(user: str, alerts: List[Dict]) -> None:
-    if not _db_ready():
+    if not _db_enabled():
         return _save_alerts_json(user, alerts)
     return _db_save_alerts(user, alerts)
 
 
 def load_notes(user: str) -> Dict[str, str]:
-    if not _db_ready():
+    if not _db_enabled():
         return _load_notes_json(user)
     return _db_load_notes(user)
 
 
 def save_notes(user: str, notes: Dict[str, str]) -> None:
-    if not _db_ready():
+    if not _db_enabled():
         return _save_notes_json(user, notes)
     return _db_save_notes(user, notes)
 
 
 def load_news_subscriptions(user: str) -> List[str]:
-    if not _db_ready():
+    if not _db_enabled():
         return _load_news_subs_json(user)
     return _db_load_news_subscriptions(user)
 
 
 def save_news_subscriptions(user: str, subs: List[str]) -> None:
-    if not _db_ready():
+    if not _db_enabled():
         return _save_news_subs_json(user, subs)
     return _db_save_news_subscriptions(user, subs)
 
@@ -3225,14 +3237,35 @@ with tab1:
 
         if user_alerts:
             st.markdown(tr("alerts_delete_title"))
-            del_idx = st.selectbox(
+            alert_delete_options = []
+            for idx, a in enumerate(user_alerts):
+                ticker = a.get("ticker", "")
+                kind = a.get("kind")
+                cmp_op = a.get("cmp")
+                thr = a.get("threshold", 0.0)
+                if kind == "pct":
+                    type_txt = tr("alerts_type_pct")
+                    cond_txt = "≤" if cmp_op == "le" else "≥"
+                    details = f"Var {cond_txt} {thr:.2f}%"
+                else:
+                    type_txt = tr("alerts_type_price")
+                    cond_txt = "≤" if cmp_op == "le" else "≥"
+                    details = f"Prix {cond_txt} {thr:.2f}"
+                label = f"{idx + 1}. {ticker} | {type_txt} | {details}"
+                alert_delete_options.append({"idx": idx, "label": label})
+
+            del_choice = st.selectbox(
                 tr("alerts_delete_select"),
-                [a_idx for a_idx in range(len(user_alerts))],
+                [opt["label"] for opt in alert_delete_options],
                 key="alert_delete_select"
             )
             if st.button(tr("alerts_delete_btn")):
+                del_idx = next(
+                    (opt["idx"] for opt in alert_delete_options if opt["label"] == del_choice),
+                    None,
+                )
                 alerts = load_alerts(CURRENT_USER)
-                if 0 <= del_idx < len(alerts):
+                if del_idx is not None and 0 <= del_idx < len(alerts):
                     alerts.pop(del_idx)
                     save_alerts(CURRENT_USER, alerts)
                     st.success(tr("alerts_deleted"))

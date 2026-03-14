@@ -3536,11 +3536,11 @@ with tab1:
             pct_cols = ["Perf 1M", "Perf 3M", "Perf 6M", "Perf 1Y", "Surperf 1Y vs BM (pts)"]
             for col in pct_cols:
                 if col in csv_df.columns:
-                    csv_df[col] = (csv_df[col] * 100).round(2)
+                    csv_df[col] = (pd.to_numeric(csv_df[col], errors='coerce') * 100).round(2)
             round2_cols = ["Market Cap (Mds)", "P/E (trailing)", "Fantazia Score (%)", "Fantazia Perso (%)"]
             for col in round2_cols:
                 if col in csv_df.columns:
-                    csv_df[col] = csv_df[col].round(2)
+                    csv_df[col] = pd.to_numeric(csv_df[col], errors='coerce').round(2)
             if "Source historique" in csv_df.columns:
                 import re as _re
                 csv_df["Source historique"] = csv_df["Source historique"].apply(

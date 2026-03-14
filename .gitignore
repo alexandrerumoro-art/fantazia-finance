@@ -6,10 +6,23 @@ venv/
 __pycache__/
 *.pyc
 
-# Répertoires de Streamlit
-.streamlit/
+# Streamlit (on versionne la config, pas les secrets)
+.streamlit/secrets.toml
+.env
+
 
 # Fichiers sensibles / locaux
 config.json
 users.json
 watchlists.json
+watchlists_old.json
+alerts.json
+notes.json
+news_subscriptions.json
+
+# Fichiers locaux / utilitaires non déployés
+launch.bat
+pack_secrets.py
+backup_fiche_action.py
+.claudecommands.md
+.claude/

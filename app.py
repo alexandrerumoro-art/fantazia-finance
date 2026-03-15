@@ -4,6 +4,10 @@ import base64
 import hashlib
 import secrets
 import html
+import smtplib
+import ssl as _ssl
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from io import BytesIO
 from typing import List, Dict, Optional, Tuple, Callable
 
@@ -371,7 +375,7 @@ TRANSLATIONS = {
         "tab_watchlists": "⭐ Watchlists",
         "tab_simulator": "💼 Simulateur",
         "tab_stock": "📄 Fiche action",
-        "tab_help": "ℹ️ Aide",
+        "tab_help": "ℹ️ Aide / À propos",
         "tab_assistant": "🤖 Assistant",
         "tab_profile": "👤 Profil",
         "tab_premium": "💎 Premium",
@@ -542,7 +546,7 @@ TRANSLATIONS = {
         "tab_watchlists": "⭐ Watchlists",
         "tab_simulator": "💼 Simulator",
         "tab_stock": "📄 Stock sheet",
-        "tab_help": "ℹ️ Help",
+        "tab_help": "ℹ️ Help / About",
         "tab_assistant": "🤖 Assistant",
         "tab_profile": "👤 Profile",
         "tab_premium": "💎 Premium",
@@ -981,6 +985,120 @@ seed_file_from_b64(ALERTS_FILE, ALERTS_JSON_B64, {})
 seed_file_from_b64(NOTES_FILE, NOTES_JSON_B64, {})
 seed_file_from_b64(NEWS_SUB_FILE, NEWS_SUBSCRIPTIONS_JSON_B64, {})
 
+
+# =========================================================
+# EMAIL
+# =========================================================
+def send_email(to: str, subject: str, html_body: str) -> bool:
+    """Envoie un email HTML via SMTP SSL (port 465). Retourne True si succès."""
+    import traceback
+    debug_lines = []
+    try:
+        smtp_server = st.secrets.get("smtp_server", "")
+        smtp_port_raw = st.secrets.get("smtp_port", 465)
+        smtp_login = st.secrets.get("smtp_login", "")
+        smtp_password = st.secrets.get("smtp_password", "")
+        smtp_port = int(smtp_port_raw)
+
+        debug_lines.append(f"smtp_server='{smtp_server}'")
+        debug_lines.append(f"smtp_port={smtp_port}")
+        debug_lines.append(f"smtp_login='{smtp_login}'")
+        debug_lines.append(f"smtp_password={'SET' if smtp_password else 'MISSING'}")
+        debug_lines.append(f"to='{to}'")
+
+        if not smtp_server:
+            st.error("[send_email] ERREUR : smtp_server manquant dans secrets")
+            return False
+        if not smtp_login:
+            st.error("[send_email] ERREUR : smtp_login manquant dans secrets")
+            return False
+        if not smtp_password:
+            st.error("[send_email] ERREUR : smtp_password manquant dans secrets")
+            return False
+        if not to:
+            st.error("[send_email] ERREUR : destinataire vide")
+            return False
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = smtp_login
+        msg["To"] = to
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        debug_lines.append("Connexion SMTP_SSL en cours...")
+        context = _ssl.create_default_context()
+        with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
+            debug_lines.append("Connexion OK — login en cours...")
+            server.login(smtp_login, smtp_password)
+            debug_lines.append("Login OK — envoi en cours...")
+            server.sendmail(smtp_login, to, msg.as_string())
+            debug_lines.append("Envoi OK")
+
+        st.success(f"[send_email] Email envoyé à {to}")
+        return True
+
+    except Exception as e:
+        tb = traceback.format_exc()
+        debug_info = " | ".join(debug_lines)
+        st.error(f"[send_email] ÉCHEC — {type(e).__name__}: {e}")
+        st.error(f"[send_email] Étapes : {debug_info}")
+        st.code(tb, language="text")
+        return False
+
+
+def _build_welcome_email(username: str) -> str:
+    return f"""<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background-color:#1a1a1a;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1a1a;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<tr><td style="background-color:#000000;padding:30px 40px;text-align:center;border-radius:8px 8px 0 0;">
+  <h1 style="margin:0;color:#F5A623;font-size:28px;letter-spacing:2px;">💎 FANTAZIA FINANCE</h1>
+</td></tr>
+<tr><td style="background-color:#F8F9FA;padding:40px;">
+  <h2 style="color:#1a1a1a;margin-top:0;">Bonjour {username} !</h2>
+  <p style="color:#333;line-height:1.6;">Bienvenue sur Fantazia Finance. Votre compte a bien été créé.</p>
+  <p style="color:#333;line-height:1.6;">Explorez nos outils d'analyse boursière et rejoignez notre communauté d'investisseurs.</p>
+  <div style="text-align:center;margin:30px 0;">
+    <a href="https://discord.gg/MAkCMg7QQF" style="background-color:#F5A623;color:#000000;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">👾 Rejoindre notre Discord</a>
+  </div>
+</td></tr>
+<tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
+  <p style="color:#888;font-size:12px;margin:0;">Fantazia Finance · contact@fantaziafinance.com · Aucun conseil financier</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _build_reset_email(username: str, reset_link: str) -> str:
+    return f"""<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background-color:#1a1a1a;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1a1a;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<tr><td style="background-color:#000000;padding:30px 40px;text-align:center;border-radius:8px 8px 0 0;">
+  <h1 style="margin:0;color:#F5A623;font-size:28px;letter-spacing:2px;">💎 FANTAZIA FINANCE</h1>
+</td></tr>
+<tr><td style="background-color:#F8F9FA;padding:40px;">
+  <h2 style="color:#1a1a1a;margin-top:0;">Bonjour {username},</h2>
+  <p style="color:#333;line-height:1.6;">Une demande de réinitialisation de mot de passe a été effectuée.</p>
+  <p style="color:#333;line-height:1.6;">Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.</p>
+  <p style="color:#333;line-height:1.6;"><strong>Ce lien est valable 1 heure.</strong></p>
+  <div style="text-align:center;margin:30px 0;">
+    <a href="{reset_link}" style="background-color:#F5A623;color:#000000;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">🔑 Réinitialiser mon mot de passe</a>
+  </div>
+</td></tr>
+<tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
+  <p style="color:#888;font-size:12px;margin:0;">Si vous n'êtes pas à l'origine de cette demande, ignorez cet email. · Fantazia Finance</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
 # =========================================================
 # USERS
 # =========================================================
@@ -1036,6 +1154,83 @@ def save_users(users: Dict[str, Dict[str, str]]) -> None:
 
 def hash_password(password: str, salt: str) -> str:
     return hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+
+
+def set_reset_token(email: str) -> Optional[Tuple[str, str]]:
+    """Génère un token de reset pour l'email donné. Retourne (username, token) ou None."""
+    if engine is None:
+        return None
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT username FROM app_users WHERE email = :e"),
+                {"e": email.strip().lower()}
+            ).fetchone()
+            if row is None:
+                return None
+            username = row[0]
+        token = secrets.token_urlsafe(32)
+        from datetime import datetime, timezone, timedelta
+        expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+        with engine.begin() as conn:
+            conn.execute(text(
+                "UPDATE app_users SET reset_token = :t, reset_token_expiry = :e WHERE username = :u"
+            ), {"t": token, "e": expiry.isoformat(), "u": username})
+        return username, token
+    except Exception:
+        return None
+
+
+def consume_reset_token(token: str) -> Optional[str]:
+    """Vérifie le token de reset. Retourne username si valide et non expiré, None sinon."""
+    if engine is None or not token:
+        return None
+    try:
+        from datetime import datetime, timezone
+        with engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT username, reset_token_expiry FROM app_users WHERE reset_token = :t"),
+                {"t": token}
+            ).fetchone()
+            if row is None:
+                return None
+            username, expiry = row[0], row[1]
+            if expiry is None:
+                return None
+            if isinstance(expiry, str):
+                expiry = datetime.fromisoformat(expiry)
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expiry:
+                return None
+            return username
+    except Exception:
+        return None
+
+
+def update_password(username: str, new_hash: str, new_salt: str) -> bool:
+    """Met à jour le mot de passe en DB et efface le token de reset."""
+    if engine is None:
+        return False
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "UPDATE app_users SET password_hash = :ph, salt = :s, "
+                "reset_token = NULL, reset_token_expiry = NULL WHERE username = :u"
+            ), {"ph": new_hash, "s": new_salt, "u": username})
+        # Mise à jour du backup JSON
+        try:
+            users = load_users()
+            if username in users:
+                users[username]["password_hash"] = new_hash
+                users[username]["salt"] = new_salt
+                with open(USERS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(users, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
 
 
 def is_email_taken(email: str) -> bool:
@@ -1136,9 +1331,47 @@ def show_premium_gate(msg: str = "") -> None:
     st.warning(f"🔒 Fonctionnalité réservée aux comptes **Premium**.{extra} Passez à Premium pour débloquer.")
 
 
+def _show_reset_password_page(token: str) -> None:
+    """Affiche le formulaire de réinitialisation de mot de passe."""
+    _, col, _ = st.columns([1, 2, 1])
+    with col:
+        try:
+            st.image("Fantazia finance logo chatgpt.png", width=120)
+        except Exception:
+            pass
+        st.title("🔑 Nouveau mot de passe")
+        username = consume_reset_token(token)
+        if username is None:
+            st.error("Ce lien est invalide ou expiré. Veuillez refaire une demande de réinitialisation.")
+            st.stop()
+        st.info(f"Compte : **{username}**")
+        new_pwd = st.text_input("Nouveau mot de passe (min. 6 caractères)", type="password", key="rp_pwd")
+        new_pwd2 = st.text_input("Confirmer le mot de passe", type="password", key="rp_pwd2")
+        rp_msg = st.empty()
+        if st.button("Confirmer le nouveau mot de passe", key="rp_btn"):
+            if not new_pwd or len(new_pwd) < 6:
+                rp_msg.error("Le mot de passe doit faire au moins 6 caractères.")
+            elif new_pwd != new_pwd2:
+                rp_msg.error("Les mots de passe ne correspondent pas.")
+            else:
+                new_salt = secrets.token_hex(16)
+                new_hash = hash_password(new_pwd, new_salt)
+                if update_password(username, new_hash, new_salt):
+                    rp_msg.success("Mot de passe mis à jour ! Vous pouvez maintenant vous connecter.")
+                    st.query_params.clear()
+                else:
+                    rp_msg.error("Erreur lors de la mise à jour. Réessayez.")
+
+
 def ensure_authenticated() -> str:
     if "user" in st.session_state and st.session_state["user"]:
         return st.session_state["user"]
+
+    # --- Page de réinitialisation si token présent dans l'URL ---
+    reset_token_param = st.query_params.get("reset_token", "")
+    if reset_token_param:
+        _show_reset_password_page(reset_token_param)
+        st.stop()
 
     _, col_auth, _ = st.columns([1, 2, 1])
     with col_auth:
@@ -1181,6 +1414,36 @@ def ensure_authenticated() -> str:
                         else:
                             msg.error(tr("login_err_wrong_pwd"))
 
+            # --- Mot de passe oublié ---
+            st.write("")
+            if st.button("Mot de passe oublié ?", key="li_forgot_toggle"):
+                st.session_state["show_forgot"] = not st.session_state.get("show_forgot", False)
+            if st.session_state.get("show_forgot", False):
+                st.write("---")
+                forgot_email = st.text_input("Votre adresse email", key="li_forgot_email")
+                forgot_msg = st.empty()
+                if st.button("Envoyer le lien de réinitialisation", key="li_forgot_send"):
+                    import re as _re
+                    if not forgot_email or not _re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", forgot_email):
+                        forgot_msg.error("Entrez une adresse email valide.")
+                    else:
+                        result = set_reset_token(forgot_email.strip().lower())
+                        if result:
+                            username_r, token_r = result
+                            try:
+                                app_url = st.secrets.get("APP_URL", "http://localhost:8501")
+                            except Exception:
+                                app_url = "http://localhost:8501"
+                            reset_link = f"{app_url}?reset_token={token_r}"
+                            html_reset = _build_reset_email(username_r, reset_link)
+                            send_email(
+                                forgot_email.strip().lower(),
+                                "Réinitialisation de votre mot de passe Fantazia Finance",
+                                html_reset,
+                            )
+                        # Message neutre (sécurité : ne révèle pas si l'email existe)
+                        forgot_msg.success("Si cet email est associé à un compte, vous recevrez un lien de réinitialisation.")
+
         with tab_signup:
             st.write("")
             username_input_s = st.text_input(tr("login_username"), key="su_user")
@@ -1216,6 +1479,8 @@ def ensure_authenticated() -> str:
                     st.session_state["email"] = email
                     load_user_subscription(username)
                     msg_s.success(tr("login_ok_signup"))
+                    if email:
+                        send_email(email, "Bienvenue sur Fantazia Finance 🎉", _build_welcome_email(username))
                     rerun_app()
 
     st.stop()
@@ -4559,6 +4824,76 @@ with tab5:
                 "- **Beta**: Sensitivity to the market (1 = like index, >1 = more volatile).\n"
             )
         st.divider()
+
+        # --- À propos & Roadmap ---
+        st.divider()
+        st.subheader("💡 À propos de Fantazia Finance")
+        st.markdown(
+            "Fantazia Finance est une plateforme d'analyse boursière indépendante, créée pour permettre "
+            "aux investisseurs particuliers d'explorer, comparer et simuler des investissements de manière "
+            "simple et éducative.  \n"
+            "Le projet est développé activement et évolue grâce aux retours de sa communauté."
+        )
+
+        st.subheader("🗺️ Roadmap")
+        st.markdown(
+            "**✅ Déjà disponible :**\n"
+            "- Comparateur d'actions par secteur\n"
+            "- Watchlists personnalisées\n"
+            "- Simulateur de portefeuille\n"
+            "- Fiche action détaillée\n"
+            "- Alertes de prix\n"
+            "- Assistant IA intégré\n"
+            "- Système freemium\n"
+        )
+        st.markdown(
+            "**🔜 Prochainement :**\n"
+            "- 📰 Fantazia Feed — fil d'actualités économiques propulsé par l'IA "
+            "(résumés, impact marché, tags, style réseau social)\n"
+            "- 💼 Intégration de portefeuille réel\n"
+            "- 💳 Paiement en ligne via Stripe\n"
+        )
+        st.markdown("**💬 Vous avez une suggestion ?** Rejoignez notre Discord :")
+        st.link_button("👾 Rejoindre le Discord", "https://discord.gg/MAkCMg7QQF")
+
+        # --- Mentions légales & CGU ---
+        st.divider()
+        st.subheader("📋 Mentions légales & Conditions d'utilisation")
+
+        st.markdown("#### Éditeur")
+        st.markdown(
+            "**Fantazia Finance**  \n"
+            "Contact : contact@fantaziafinance.com  \n"
+            "Belgique"
+        )
+
+        st.markdown("#### Nature du service")
+        st.markdown(
+            "Fantazia Finance est un outil d'analyse et de comparaison boursière à usage personnel et éducatif.  \n"
+            "Fantazia Finance n'est pas un conseiller financier agréé.  \n"
+            "Aucune information présentée ne constitue un conseil en investissement."
+        )
+
+        st.markdown("#### Données personnelles (RGPD)")
+        st.markdown(
+            "Les données collectées (adresse e-mail, nom d'utilisateur) sont utilisées uniquement pour "
+            "le fonctionnement du service.  \n"
+            "Elles ne sont jamais vendues ni partagées avec des tiers.  \n"
+            "Vous pouvez demander la suppression de votre compte en nous contactant."
+        )
+
+        st.markdown("#### Responsabilité")
+        st.markdown(
+            "Vous êtes seul(e) responsable de vos décisions d'investissement.  \n"
+            "Fantazia Finance ne peut être tenu responsable des pertes financières résultant de l'utilisation "
+            "de la plateforme."
+        )
+
+        st.markdown("#### Conditions générales d'utilisation")
+        st.markdown(
+            "L'utilisation de Fantazia Finance implique l'acceptation des présentes conditions.  \n"
+            "Tout usage frauduleux ou abusif entraîne la suspension du compte."
+        )
 
 
 # =========================================================

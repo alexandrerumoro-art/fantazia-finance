@@ -1859,16 +1859,125 @@ def ensure_authenticated() -> str:
         _show_reset_password_page(reset_token_param)
         st.stop()
 
+    # --- Fond noir pleine page ---
+    st.markdown("""
+    <style>
+    /* Fond noir pleine page */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"],
+    .stApp {
+        background-color: #0f0f0f !important;
+    }
+    [data-testid="stSidebar"] {
+        display: none !important;
+    }
+    section[data-testid="stMain"] > div {
+        padding-top: 1rem !important;
+    }
+
+    /* Card blanche — wrapper custom */
+    .ff-form-card {
+        background: #ffffff;
+        border-radius: 0 0 16px 16px;
+        padding: 24px 28px;
+        max-width: 440px;
+        margin: 0 auto;
+    }
+    .ff-form-card label,
+    .ff-form-card p,
+    .ff-form-card span {
+        color: #111111 !important;
+    }
+    .ff-form-card input {
+        background: #f9fafb !important;
+        color: #111111 !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 8px !important;
+    }
+    .ff-form-card .stTextInput input {
+        background: #f9fafb !important;
+        color: #111111 !important;
+    }
+    /* Onglets dans la card */
+    .ff-form-card button[role="tab"] {
+        color: #888 !important;
+    }
+    .ff-form-card button[role="tab"][aria-selected="true"] {
+        color: #111 !important;
+    }
+    /* Cacher les colonnes vides autour */
+    .ff-col-hide > div:first-child,
+    .ff-col-hide > div:last-child {
+        display: none !important;
+    }
+
+    /* Labels et textes du formulaire en blanc sur fond noir */
+    label, .stTextInput label, .stPasswordInput label {
+        color: #ffffff !important;
+    }
+    /* Onglets Se connecter / Créer un compte */
+    button[role="tab"] {
+        color: #aaaaaa !important;
+    }
+    button[role="tab"][aria-selected="true"] {
+        color: #ffffff !important;
+    }
+    /* Placeholder des champs */
+    input::placeholder {
+        color: #888888 !important;
+    }
+    /* Texte dans les champs */
+    input {
+        color: #111111 !important;
+    }
+    /* Texte des liens et petits textes */
+    .stMarkdown p, .stCaption {
+        color: #aaaaaa !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # --- Bloc visuel header login ---
+    st.markdown("""
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 20px 0;font-family:Arial,sans-serif;">
+
+      <div style="color:#F5A623;font-size:20px;font-weight:700;letter-spacing:3px;margin-bottom:4px;">FANTAZIA FINANCE</div>
+      <div style="color:#666;font-size:12px;letter-spacing:1px;margin-bottom:16px;">Plateforme d'analyse boursière</div>
+
+      <div style="display:inline-flex;align-items:center;gap:6px;background:#1a1a1a;border:1px solid #333;border-radius:999px;padding:4px 14px;margin-bottom:20px;">
+        <div style="width:7px;height:7px;border-radius:50%;background:#F5A623;"></div>
+        <div style="color:#F5A623;font-size:11px;font-weight:600;letter-spacing:1px;">Aucun conseil financier</div>
+      </div>
+
+      <div style="color:#fff;font-size:20px;font-weight:700;line-height:1.4;margin-bottom:24px;">
+        Analysez les marchés.<br>Avec <span style="color:#F5A623;">la tête posée.</span>
+      </div>
+
+      <div style="background:#1a1a1a;border-radius:12px 12px 0 0;width:100%;max-width:440px;padding:20px 24px;text-align:left;">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#F5A623;margin-top:6px;flex-shrink:0;"></div>
+          <div style="color:#aaa;font-size:12px;line-height:1.5;"><strong style="color:#fff;">Fantazia Score</strong> — Comparez les actions sur 4 dimensions : Value, Quality, Momentum, Risk.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#F5A623;margin-top:6px;flex-shrink:0;"></div>
+          <div style="color:#aaa;font-size:12px;line-height:1.5;"><strong style="color:#fff;">Watchlists & alertes</strong> — Suivez vos actions et soyez notifié en temps réel.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#F5A623;margin-top:6px;flex-shrink:0;"></div>
+          <div style="color:#aaa;font-size:12px;line-height:1.5;"><strong style="color:#fff;">Simulateur de portfolio</strong> — Testez vos stratégies sans risque réel.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#F5A623;margin-top:6px;flex-shrink:0;"></div>
+          <div style="color:#aaa;font-size:12px;line-height:1.5;"><strong style="color:#fff;">Score personnalisé*</strong> — Adaptez l'analyse à votre façon d'investir. <span style="color:#F5A623;font-weight:600;">Premium</span></div>
+        </div>
+      </div>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="ff-form-card">', unsafe_allow_html=True)
     _, col_auth, _ = st.columns([1, 2, 1])
     with col_auth:
-        try:
-            st.image("Fantazia finance logo chatgpt.png", width=120)
-        except Exception:
-            pass
-        st.title(tr("login_title"))
-        st.caption("Plateforme d'analyse boursière · Aucun conseil financier")
-        st.write("")
-
         users = load_users()
         tab_login, tab_signup = st.tabs([tr("login_mode_login"), tr("login_mode_signup")])
 
@@ -1968,6 +2077,21 @@ def ensure_authenticated() -> str:
                     if email:
                         send_email(email, "Bienvenue sur Fantazia Finance 🎉", _build_welcome_email(username))
                     rerun_app()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Disclaimers bas de page ---
+    st.markdown("""
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:16px 20px 32px;font-family:Arial,sans-serif;max-width:440px;margin:0 auto;">
+      <div style="color:#444;font-size:10px;line-height:1.6;border-top:1px solid #222;padding-top:10px;margin-bottom:8px;width:100%;">
+        * Le Score personnalisé adapte les pondérations d'analyse selon vos préférences déclarées. Il ne constitue ni un conseil en investissement, ni une recommandation d'achat ou de vente, ni une stratégie personnalisée. Toute décision reste sous votre entière responsabilité.
+      </div>
+      <div style="color:#555;font-size:10px;line-height:1.5;">
+        Fantazia Finance · contact@fantaziafinance.com<br>
+        Les analyses présentées ne constituent pas un conseil en investissement.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     st.stop()
 
@@ -4937,7 +5061,7 @@ with tab4:
                     st.write("❌ Aucune note enregistrée pour l'instant.")
                 st.markdown("**📰 News suivies**")
                 if is_subscribed:
-                    st.write("✅ Tu suis les news de ce ticker.")
+                    st.write("✅ Vous suivez les news de ce ticker.")
                 else:
                     st.write("❌ Tu ne suis pas encore les news de ce ticker.")
             else:

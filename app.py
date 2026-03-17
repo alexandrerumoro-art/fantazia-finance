@@ -331,7 +331,7 @@ TRANSLATIONS = {
         "app_title": "Fantazia Finance",
         "app_caption": "Plateforme d'analyse boursière · Aucun conseil financier · Connecté : {user}",
         "login_title": "🔐 Fantazia Finance — Connexion",
-        "login_subtitle": "Crée un compte ou connecte-toi pour utiliser le terminal Fantazia Finance.",
+        "login_subtitle": "Créez un compte ou connectez-vous pour utiliser le terminal Fantazia Finance.",
         "login_mode_login": "Se connecter",
         "login_mode_signup": "Créer un compte",
         "login_username": "Pseudo (min. 3 caractères)",
@@ -382,7 +382,7 @@ TRANSLATIONS = {
         "profile_title": "Mon profil",
         "profile_current_email": "Email actuel",
         "profile_new_email": "Nouvel email",
-        "profile_confirm_pwd": "Confirme ton mot de passe actuel",
+        "profile_confirm_pwd": "Confirmez votre mot de passe actuel",
         "profile_save": "Mettre à jour l'email",
         "profile_saved": "Email mis à jour ✅",
         "profile_err_same": "Le nouvel email est identique à l'actuel.",
@@ -443,13 +443,13 @@ TRANSLATIONS = {
         "score_details_title": "🧮 Détails du Fantazia Score",
         "custom_score_title": "⚙️ Fantazia Score personnalisé",
         "custom_score_enable": "Activer le Fantazia Score personnalisé",
-        "custom_score_info": "Si activé, les classements et filtres utilisent ton Fantazia Score perso (basé sur les poids ci-dessous). Le score officiel reste visible pour référence.",
+        "custom_score_info": "Si activé, les classements et filtres utilisent votre Fantazia Score personnalisé (basé sur les poids ci-dessous). Le score officiel reste visible pour référence.",
         "tech_notes_title": "ℹ️ Notes techniques",
         "mynews_title": "📰 Mes news suivies (abonnements)",
         "mynews_no_key": "Aucune clé Finnhub configurée → impossible de charger les news. Ajoute `FINNHUB_API_KEY` dans Streamlit Secrets.",
-        "mynews_no_subs": "Tu n'es abonné aux news d'aucune action pour l'instant. Va dans l'onglet **📄 Fiche action** et coche *\"Suivre les news de TICKER\"*.",
-        "mynews_none_recent": "Aucune news récente trouvée pour tes abonnements, ou bien rafraîchissez la page.",
-        "watchlists_title": "⭐ Gérer tes watchlists",
+        "mynews_no_subs": "Vous n'êtes abonné aux news d'aucune action pour l'instant. Rendez-vous dans l'onglet **📄 Fiche action** et cochez *\"Suivre les news\"*.",
+        "mynews_none_recent": "Aucune news récente trouvée pour vos abonnements, ou bien rafraîchissez la page.",
+        "watchlists_title": "⭐ Gérer vos watchlists",
         "watchlists_caption": "Vos watchlists personnelles, liées à votre compte.",
         "watchlists_create": "### Créer une watchlist",
         "watchlists_name": "Nom de la watchlist",
@@ -478,7 +478,7 @@ TRANSLATIONS = {
         "sim_detail": "Détail par ligne",
         "stock_title": "📄 Fiche détaillée par action",
         "stock_follow_news": "Suivre les news de {ticker}",
-        "stock_follow_added": "Tu es maintenant abonné aux news de {ticker}.",
+        "stock_follow_added": "Vous êtes maintenant abonné aux news de {ticker}.",
         "stock_follow_removed": "Abonnement aux news de {ticker} supprimé.",
         "stock_price_history": "#### Prix historique",
         "stock_pe_history": "#### P/E approximatif dans le temps",
@@ -495,8 +495,8 @@ TRANSLATIONS = {
         "help_api_status": "### Statut des clés API",
         "help_glossary": "📚 Glossaire rapide (termes financiers)",
         "assistant_title": "🤖 Assistant Fantazia (FAQ)",
-        "assistant_caption": "Pose tes questions sur le fonctionnement du site : Fantazia Score, graphiques, watchlists, alertes, simulateur, benchmark, corrélation, news, etc.",
-        "assistant_input": "Ta question sur Fantazia Finance...",
+        "assistant_caption": "Posez vos questions sur le fonctionnement du site : Fantazia Score, graphiques, watchlists, alertes, simulateur, benchmark, corrélation, news, etc.",
+        "assistant_input": "Votre question sur Fantazia Finance...",
     },
     "en": {
         "app_title": "Fantazia Finance",
@@ -618,7 +618,7 @@ TRANSLATIONS = {
         "tech_notes_title": "ℹ️ Technical notes",
         "mynews_title": "📰 My followed news (subscriptions)",
         "mynews_no_key": "No Finnhub key configured → cannot load news. Add `FINNHUB_API_KEY` in Streamlit Secrets.",
-        "mynews_no_subs": "You are not subscribed to any stock news yet. Go to **📄 Stock sheet** and check *\"Follow news of TICKER\"*.",
+        "mynews_no_subs": "You are not subscribed to any stock news yet. Go to **📄 Stock sheet** and check *\"Follow news\"*.",
         "mynews_none_recent": "No recent news found for your subscriptions, or please refresh the page.",
         "watchlists_title": "⭐ Manage your watchlists (local, account-linked)",
         "watchlists_caption": "Stored in {file} under key '{user}'.",
@@ -1063,6 +1063,12 @@ def _build_welcome_email(username: str) -> str:
     <a href="https://discord.gg/MAkCMg7QQF" style="background-color:#F5A623;color:#000000;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">👾 Rejoindre notre Discord</a>
   </div>
 </td></tr>
+<tr><td style="background-color:#F8F9FA;padding:0 40px 24px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+  <p style="color:#999;font-size:11px;text-align:center;line-height:1.6;margin:0;">
+    Ce contenu est fourni à titre informatif uniquement.<br>
+    Fantazia Finance ne constitue ni un conseil en investissement ni une recommandation personnalisée.
+  </p>
+</td></tr>
 <tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
   <p style="color:#888;font-size:12px;margin:0;">Fantazia Finance · contact@fantaziafinance.com · Aucun conseil financier</p>
 </td></tr>
@@ -1090,9 +1096,179 @@ def _build_reset_email(username: str, reset_link: str) -> str:
     <a href="{reset_link}" style="background-color:#F5A623;color:#000000;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">🔑 Réinitialiser mon mot de passe</a>
   </div>
 </td></tr>
-<tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
-  <p style="color:#888;font-size:12px;margin:0;">Si vous n'êtes pas à l'origine de cette demande, ignorez cet email. · Fantazia Finance</p>
+<tr><td style="background-color:#F8F9FA;padding:0 40px 24px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+  <p style="color:#999;font-size:11px;text-align:center;line-height:1.6;margin:0;">
+    Ce contenu est fourni à titre informatif uniquement.<br>
+    Fantazia Finance ne constitue ni un conseil en investissement ni une recommandation personnalisée.
+  </p>
 </td></tr>
+<tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
+  <p style="color:#888;font-size:12px;margin:0;">Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.<br>Fantazia Finance · contact@fantaziafinance.com · Aucun conseil financier</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _build_premium_email(username: str) -> str:
+    return f"""<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background-color:#1a1a1a;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1a1a;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <tr><td style="background-color:#000000;padding:30px 40px;text-align:center;border-radius:8px 8px 0 0;">
+    <h1 style="margin:0;color:#F5A623;font-size:28px;letter-spacing:2px;">💎 FANTAZIA FINANCE</h1>
+  </td></tr>
+
+  <tr><td style="background-color:#F8F9FA;padding:40px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+    <h2 style="color:#1a1a1a;margin-top:0;">Bienvenue dans Fantazia Premium, {username} !</h2>
+    <p style="color:#555;line-height:1.7;font-size:14px;margin-bottom:24px;">
+      Votre compte vient de passer en <strong style="color:#F5A623;">Premium</strong>. Toutes les fonctionnalités avancées sont désormais accessibles.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr><td style="padding:0 0 12px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%"><tr>
+          <td width="32" valign="top" style="padding-top:2px;">
+            <div style="width:22px;height:22px;background-color:#F5A623;border-radius:50%;text-align:center;line-height:22px;font-size:12px;font-weight:bold;color:#000;">✓</div>
+          </td>
+          <td style="font-size:14px;color:#333;line-height:1.6;">
+            <strong>FTZ Score personnalisé</strong><br>
+            <span style="color:#666;">Configurez vos pondérations Value / Quality / Momentum / Risk directement dans l'application.</span>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:0 0 12px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%"><tr>
+          <td width="32" valign="top" style="padding-top:2px;">
+            <div style="width:22px;height:22px;background-color:#F5A623;border-radius:50%;text-align:center;line-height:22px;font-size:12px;font-weight:bold;color:#000;">✓</div>
+          </td>
+          <td style="font-size:14px;color:#333;line-height:1.6;">
+            <strong>Analyses illimitées</strong><br>
+            <span style="color:#666;">Plus de limite quotidienne. Analysez autant d'actions que vous le souhaitez.</span>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:0 0 12px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%"><tr>
+          <td width="32" valign="top" style="padding-top:2px;">
+            <div style="width:22px;height:22px;background-color:#F5A623;border-radius:50%;text-align:center;line-height:22px;font-size:12px;font-weight:bold;color:#000;">✓</div>
+          </td>
+          <td style="font-size:14px;color:#333;line-height:1.6;">
+            <strong>Exports CSV & PDF</strong><br>
+            <span style="color:#666;">Téléchargez vos tableaux d'analyse, watchlists et fiches action.</span>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:0 0 12px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%"><tr>
+          <td width="32" valign="top" style="padding-top:2px;">
+            <div style="width:22px;height:22px;background-color:#F5A623;border-radius:50%;text-align:center;line-height:22px;font-size:12px;font-weight:bold;color:#000;">✓</div>
+          </td>
+          <td style="font-size:14px;color:#333;line-height:1.6;">
+            <strong>Alertes de prix</strong><br>
+            <span style="color:#666;">Configurez des alertes sur vos actions et soyez notifié dès qu'un seuil est atteint.</span>
+          </td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:0 0 12px 0;">
+        <table cellpadding="0" cellspacing="0" width="100%"><tr>
+          <td width="32" valign="top" style="padding-top:2px;">
+            <div style="width:22px;height:22px;background-color:#F5A623;border-radius:50%;text-align:center;line-height:22px;font-size:12px;font-weight:bold;color:#000;">✓</div>
+          </td>
+          <td style="font-size:14px;color:#333;line-height:1.6;">
+            <strong>Watchlists illimitées</strong><br>
+            <span style="color:#666;">Créez autant de listes de suivi que vous le souhaitez, sans restriction.</span>
+          </td>
+        </tr></table>
+      </td></tr>
+    </table>
+
+    <div style="background-color:#FFF8EC;border-left:3px solid #F5A623;padding:16px 20px;margin-bottom:28px;border-radius:0 6px 6px 0;">
+      <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
+        <strong>Votre première étape :</strong> connectez-vous et configurez votre FTZ Score personnalisé. Un court questionnaire vous sera proposé directement dans l'application.
+      </p>
+    </div>
+
+    <div style="text-align:center;margin:28px 0 8px;">
+      <a href="https://discord.gg/MAkCMg7QQF" style="background-color:#F5A623;color:#000000;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">👾 Rejoindre notre Discord</a>
+    </div>
+  </td></tr>
+
+  <tr><td style="background-color:#F8F9FA;padding:0 40px 24px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+    <p style="color:#999;font-size:11px;text-align:center;line-height:1.6;margin:0;">
+      Ce contenu est fourni à titre informatif uniquement.<br>
+      Fantazia Finance ne constitue ni un conseil en investissement ni une recommandation personnalisée.
+    </p>
+  </td></tr>
+
+  <tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
+    <p style="color:#888;font-size:12px;margin:0;">Fantazia Finance · contact@fantaziafinance.com · Aucun conseil financier</p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _build_alert_email(username: str, triggered: list) -> str:
+    rows = ""
+    for a in triggered:
+        rows += f"""
+        <tr>
+          <td style="padding:10px 12px;font-size:14px;color:#333;font-weight:bold;border-bottom:1px solid #e0e0e0;">{a['ticker']}</td>
+          <td style="padding:10px 12px;font-size:14px;color:#555;border-bottom:1px solid #e0e0e0;">{a['desc']}</td>
+        </tr>"""
+
+    return f"""<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background-color:#1a1a1a;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1a1a;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+  <tr><td style="background-color:#000000;padding:30px 40px;text-align:center;border-radius:8px 8px 0 0;">
+    <h1 style="margin:0;color:#F5A623;font-size:28px;letter-spacing:2px;">💎 FANTAZIA FINANCE</h1>
+  </td></tr>
+
+  <tr><td style="background-color:#F8F9FA;padding:40px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+    <h2 style="color:#1a1a1a;margin-top:0;">🔔 Alerte déclenchée, {username} !</h2>
+    <p style="color:#555;line-height:1.7;font-size:14px;margin-bottom:24px;">
+      Une ou plusieurs de vos alertes de prix ont été atteintes. Voici le récapitulatif :
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;margin-bottom:28px;">
+      <tr style="background-color:#000000;">
+        <td style="padding:10px 12px;font-size:12px;font-weight:bold;color:#F5A623;text-transform:uppercase;letter-spacing:1px;">Action</td>
+        <td style="padding:10px 12px;font-size:12px;font-weight:bold;color:#F5A623;text-transform:uppercase;letter-spacing:1px;">Condition atteinte</td>
+      </tr>
+      {rows}
+    </table>
+
+    <div style="background-color:#FFF8EC;border-left:3px solid #F5A623;padding:16px 20px;margin-bottom:28px;border-radius:0 6px 6px 0;">
+      <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
+        Connectez-vous à Fantazia Finance pour consulter l'analyse complète de ces actions.
+      </p>
+    </div>
+
+    <div style="text-align:center;margin:28px 0 8px;">
+      <a href="https://discord.gg/MAkCMg7QQF" style="background-color:#F5A623;color:#000000;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">👾 Rejoindre notre Discord</a>
+    </div>
+  </td></tr>
+
+  <tr><td style="background-color:#F8F9FA;padding:0 40px 24px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+    <p style="color:#999;font-size:11px;text-align:center;line-height:1.6;margin:0;">
+      Ce contenu est fourni à titre informatif uniquement.<br>
+      Fantazia Finance ne constitue ni un conseil en investissement ni une recommandation personnalisée.
+    </p>
+  </td></tr>
+
+  <tr><td style="background-color:#000000;padding:20px 40px;text-align:center;border-radius:0 0 8px 8px;">
+    <p style="color:#888;font-size:12px;margin:0;">Fantazia Finance · contact@fantaziafinance.com · Aucun conseil financier</p>
+  </td></tr>
+
 </table>
 </td></tr>
 </table>
@@ -1260,7 +1436,8 @@ def load_user_subscription(username: str) -> None:
         try:
             with engine.connect() as conn:
                 row = conn.execute(text(
-                    "SELECT subscription_type, subscription_expiry, email, analysis_count, analysis_date "
+                    "SELECT subscription_type, subscription_expiry, email, analysis_count, analysis_date, "
+                    "ftz_questionnaire_done, ftz_w_value, ftz_w_quality, ftz_w_momentum, ftz_w_risk "
                     "FROM app_users WHERE username = :u"
                 ), {"u": username}).fetchone()
                 if row:
@@ -1269,6 +1446,43 @@ def load_user_subscription(username: str) -> None:
                     email_val = row[2] or ""
                     a_count = int(row[3] or 0)
                     a_date = row[4]
+
+                    # Auto-downgrade si premium expiré
+                    if sub_type == "premium" and sub_expiry is not None:
+                        from datetime import datetime, timezone as _tz
+                        expiry_dt = sub_expiry
+                        if isinstance(expiry_dt, str):
+                            try:
+                                expiry_dt = datetime.fromisoformat(expiry_dt)
+                            except Exception:
+                                expiry_dt = None
+                        if expiry_dt is not None:
+                            if expiry_dt.tzinfo is None:
+                                expiry_dt = expiry_dt.replace(tzinfo=_tz.utc)
+                            if datetime.now(_tz.utc) > expiry_dt:
+                                sub_type = "free"
+                                try:
+                                    with engine.begin() as conn_upd:
+                                        conn_upd.execute(text(
+                                            "UPDATE app_users SET subscription_type = 'free' "
+                                            "WHERE username = :u"
+                                        ), {"u": username})
+                                except Exception:
+                                    pass
+
+                    st.session_state["ftz_questionnaire_done"] = row[5] if row[5] is not None else False
+                    st.session_state["ftz_w_value"]    = float(row[6]) if row[6] is not None else 0.28
+                    st.session_state["ftz_w_quality"]  = float(row[7]) if row[7] is not None else 0.30
+                    st.session_state["ftz_w_momentum"] = float(row[8]) if row[8] is not None else 0.27
+                    st.session_state["ftz_w_risk"]     = float(row[9]) if row[9] is not None else 0.15
+                    # Pré-remplir les sliders avec les valeurs sauvegardées
+                    st.session_state["w_val"]  = int(round(st.session_state["ftz_w_value"]  * 100))
+                    st.session_state["w_qual"] = int(round(st.session_state["ftz_w_quality"] * 100))
+                    st.session_state["w_mom"]  = int(round(st.session_state["ftz_w_momentum"] * 100))
+                    st.session_state["w_risk"] = int(round(st.session_state["ftz_w_risk"]    * 100))
+                    # Activer le score perso si le questionnaire a été complété
+                    if st.session_state["ftz_questionnaire_done"] is True:
+                        st.session_state["fantazia_custom_enabled"] = True
             # Reset du compteur si la date a changé
             today = _date.today()
             if a_date is None or (hasattr(a_date, "date") and a_date.date() != today) or (isinstance(a_date, _date) and not hasattr(a_date, "date") and a_date != today):
@@ -1287,6 +1501,8 @@ def load_user_subscription(username: str) -> None:
     st.session_state["analysis_count"] = a_count
     if "email" not in st.session_state or not st.session_state["email"]:
         st.session_state["email"] = email_val
+    if "ftz_questionnaire_done" not in st.session_state:
+        st.session_state["ftz_questionnaire_done"] = None
 
 
 def increment_analysis_count(username: str) -> int:
@@ -1325,10 +1541,280 @@ def is_premium() -> bool:
     return expiry > datetime.now(timezone.utc)
 
 
+FTZ_QUESTIONS = [
+    {
+        "angle": "Réflexe d'analyse initial",
+        "question": "Vous venez d'entendre parler d'une action pour la première fois. Votre premier réflexe est de chercher…",
+        "answers": [
+            "À quel prix elle se négocie par rapport à ce qu'elle génère",
+            "Si l'entreprise est rentable et bien gérée",
+            "Comment le titre a évolué ces derniers mois",
+            "Si le cours a été stable ou agité récemment",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Aversion principale",
+        "question": "Ce que vous souhaitez éviter avant tout, c'est…",
+        "answers": [
+            "Payer une action trop cher par rapport à sa valeur",
+            "Investir dans une entreprise financièrement fragile",
+            "Rester à l'écart alors qu'un titre est en pleine progression",
+            "Subir des variations de cours difficiles à anticiper",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Réaction face au consensus du marché",
+        "question": "Une action est très populaire en ce moment, tout le monde en parle positivement. Vous…",
+        "answers": [
+            "Vérifiez si le prix reste raisonnable malgré l'engouement",
+            "Regardez si les résultats de l'entreprise justifient cet enthousiasme",
+            "Y voyez un signal d'analyse positif — la dynamique de marché est un indicateur en soi",
+            "Vous méfiez — la popularité s'accompagne souvent d'instabilité",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Critère de comparaison",
+        "question": "Quand vous comparez des actions entre elles, vous regardez surtout…",
+        "answers": [
+            "Si le prix de l'action est justifié par rapport à ce que l'entreprise rapporte",
+            "Si l'entreprise gagne bien sa vie et gère bien ses coûts",
+            "Laquelle a le mieux progressé ces derniers mois",
+            "Laquelle a eu le parcours boursier le plus stable",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Réaction face à une baisse prolongée",
+        "question": "Une action baisse depuis 6 mois, mais l'entreprise semble solide. Vous…",
+        "answers": [
+            "Considérez que le prix actuel pourrait représenter une opportunité d'analyse intéressante",
+            "Vérifiez d'abord les chiffres avant de vous positionner",
+            "Attendez que la tendance se retourne avant de vous intéresser au titre",
+            "Restez à l'écart — une baisse prolongée vous met mal à l'aise",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Horizon temporel naturel",
+        "question": "Quand vous analysez une action, votre horizon naturel est plutôt…",
+        "answers": [
+            "Plusieurs années — je cherche une action sous-cotée qui finira par être reconnue",
+            "Plusieurs années — ce qui compte, c'est la qualité durable de l'entreprise",
+            "6 à 12 mois — je suis la dynamique récente du titre",
+            "Le plus prévisible possible — je préfère limiter les incertitudes",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Réaction face aux marchés agités",
+        "question": "Vous identifiez une action intéressante mais les marchés sont agités en ce moment. Vous…",
+        "answers": [
+            "Estimez que la situation pourrait rendre le prix plus attractif à analyser",
+            "Vérifiez que l'entreprise reste fondamentalement saine avant d'agir",
+            "Attendez que les marchés se stabilisent et que la tendance soit claire",
+            "Préférez patienter — vous évitez d'agir dans l'incertitude",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+    {
+        "angle": "Réaction face à un gain",
+        "question": "Une de vos actions a progressé de 30 % en quelques mois. Vous…",
+        "answers": [
+            "Vérifiez si elle est encore raisonnablement valorisée",
+            "Regardez si les résultats de l'entreprise ont évolué en conséquence",
+            "Continuez à suivre le titre de près — la tendance reste votre principal indicateur",
+            "Envisagez de sécuriser une partie des gains pour limiter le risque",
+        ],
+        "piliers": ["V", "Q", "M", "R"],
+    },
+]
+
+
 def show_premium_gate(msg: str = "") -> None:
     """Affiche un message d'upgrade Premium."""
     extra = f" {msg}" if msg else ""
-    st.warning(f"🔒 Fonctionnalité réservée aux comptes **Premium**.{extra} Passez à Premium pour débloquer.")
+    st.warning(
+        f"🔒 Fonctionnalité réservée aux comptes **Premium**.{extra} "
+        f"Rendez-vous dans l'onglet **💎 Premium** pour découvrir nos offres."
+    )
+
+
+def display_dataframe(df, use_container_width=True, **kwargs):
+    """Affiche un dataframe. Premium = st.dataframe() avec export. Free = st.table() sans export."""
+    if is_premium():
+        st.dataframe(df, use_container_width=use_container_width, **kwargs)
+    else:
+        st.table(df)
+
+
+def save_ftz_profile(username: str, wv: float, wq: float, wm: float, wr: float) -> bool:
+    """Sauvegarde les pondérations FTZ dans app_users et dans ftz_profile_history."""
+    if engine is None:
+        return False
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "UPDATE app_users SET ftz_questionnaire_done=TRUE, "
+                "ftz_w_value=:wv, ftz_w_quality=:wq, ftz_w_momentum=:wm, ftz_w_risk=:wr "
+                "WHERE username=:u"
+            ), {"wv": wv, "wq": wq, "wm": wm, "wr": wr, "u": username})
+            conn.execute(text(
+                "INSERT INTO ftz_profile_history (username, w_value, w_quality, w_momentum, w_risk) "
+                "VALUES (:u, :wv, :wq, :wm, :wr)"
+            ), {"u": username, "wv": wv, "wq": wq, "wm": wm, "wr": wr})
+        st.session_state["ftz_questionnaire_done"] = True
+        st.session_state["ftz_w_value"]    = wv
+        st.session_state["ftz_w_quality"]  = wq
+        st.session_state["ftz_w_momentum"] = wm
+        st.session_state["ftz_w_risk"]     = wr
+        st.session_state["w_val"]  = int(round(wv * 100))
+        st.session_state["w_qual"] = int(round(wq * 100))
+        st.session_state["w_mom"]  = int(round(wm * 100))
+        st.session_state["w_risk"] = int(round(wr * 100))
+        st.session_state["fantazia_custom_enabled"] = True
+        return True
+    except Exception:
+        return False
+
+
+def show_ftz_questionnaire(username: str) -> None:
+    """Affiche le questionnaire FTZ Score. Bloque l'accès à l'app tant qu'il n'est pas complété."""
+    if "ftz_q_step" not in st.session_state:
+        st.session_state["ftz_q_step"] = 0
+    if "ftz_q_answers" not in st.session_state:
+        st.session_state["ftz_q_answers"] = []
+
+    step = st.session_state["ftz_q_step"]
+    answers = st.session_state["ftz_q_answers"]
+
+    _, col, _ = st.columns([1, 2, 1])
+    with col:
+        try:
+            st.image("Fantazia finance logo chatgpt.png", width=100)
+        except Exception:
+            pass
+
+        st.markdown(
+            "<h2 style='color:#F5A623;text-align:center;'>💎 Configuration de votre FTZ Score</h2>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            "<p style='text-align:center;color:#888;'>Réservé aux membres Premium — "
+            "Cette étape est obligatoire et ne prend que 2 minutes.</p>",
+            unsafe_allow_html=True
+        )
+        st.info(
+            "⚠️ Ce questionnaire identifie vos **préférences personnelles d'analyse**. "
+            "Il ne constitue ni un conseil en investissement, ni une recommandation, "
+            "ni une prédiction de performance future. "
+            "Les pondérations générées sont modifiables à tout moment."
+        )
+        st.divider()
+
+        if step < 8:
+            st.progress(step / 8, text=f"Question {step + 1} / 8")
+            st.write("")
+
+            q = FTZ_QUESTIONS[step]
+            st.markdown(f"**{q['angle']}**")
+            st.markdown(f"### {q['question']}")
+            st.write("")
+
+            choice = st.radio(
+                "Votre réponse :",
+                options=["A", "B", "C", "D"],
+                format_func=lambda x: {
+                    "A": f"A.  {q['answers'][0]}",
+                    "B": f"B.  {q['answers'][1]}",
+                    "C": f"C.  {q['answers'][2]}",
+                    "D": f"D.  {q['answers'][3]}",
+                }[x],
+                key=f"ftz_radio_{step}",
+                index=None
+            )
+
+            st.write("")
+            if st.button("Suivant →", key=f"ftz_next_{step}", type="primary"):
+                if choice is None:
+                    st.warning("Veuillez sélectionner une réponse avant de continuer.")
+                else:
+                    pilier_map = {
+                        "A": q["piliers"][0], "B": q["piliers"][1],
+                        "C": q["piliers"][2], "D": q["piliers"][3]
+                    }
+                    answers.append(pilier_map[choice])
+                    st.session_state["ftz_q_answers"] = answers
+                    st.session_state["ftz_q_step"] = step + 1
+                    st.rerun()
+
+        else:
+            pv = answers.count("V")
+            pq = answers.count("Q")
+            pm = answers.count("M")
+            pr = answers.count("R")
+            total = pv + pq + pm + pr or 1
+
+            wv_raw = pv / total
+            wq_raw = pq / total
+            wm_raw = pm / total
+            wr_raw = pr / total
+
+            def clamp_and_renorm(wv, wq, wm, wr):
+                weights = {"V": wv, "Q": wq, "M": wm, "R": wr}
+                MIN_W, MAX_W = 0.10, 0.50
+                for k in weights:
+                    weights[k] = max(MIN_W, min(MAX_W, weights[k]))
+                s = sum(weights.values())
+                return {k: v / s for k, v in weights.items()}
+
+            w = clamp_and_renorm(wv_raw, wq_raw, wm_raw, wr_raw)
+            wv, wq, wm, wr = w["V"], w["Q"], w["M"], w["R"]
+
+            st.markdown("### ✅ Vos préférences d'analyse")
+            st.write("")
+            st.markdown(
+                "Les pondérations ci-dessous reflètent vos réponses. "
+                "Elles seront appliquées à votre FTZ Score personnalisé "
+                "et restent **modifiables à tout moment**."
+            )
+            st.write("")
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("⚖️ Value",    f"{wv*100:.1f} %")
+            c2.metric("🏆 Quality",  f"{wq*100:.1f} %")
+            c3.metric("📈 Momentum", f"{wm*100:.1f} %")
+            c4.metric("🛡️ Risk",     f"{wr*100:.1f} %")
+
+            st.write("")
+            st.caption(
+                "Les pondérations proposées reflètent vos préférences déclarées d'analyse "
+                "et ne constituent ni une stratégie d'investissement ni une indication de "
+                "performance future. Fantazia Finance ne fournit aucun conseil financier personnalisé."
+            )
+            st.write("")
+
+            if st.button("✅ Confirmer et accéder à l'application", type="primary", key="ftz_confirm"):
+                ok = save_ftz_profile(username, wv, wq, wm, wr)
+                if ok:
+                    st.session_state.pop("ftz_q_step", None)
+                    st.session_state.pop("ftz_q_answers", None)
+                    st.rerun()
+                else:
+                    st.error(
+                        "⚠️ Une erreur est survenue lors de la sauvegarde. "
+                        "Nous nous excusons pour la gêne occasionnée. "
+                        "Vous pouvez accéder à l'application — le questionnaire vous sera "
+                        "reproposé à la prochaine connexion. "
+                        "Si le problème persiste, n'hésitez pas à nous contacter."
+                    )
+                    st.session_state["ftz_questionnaire_done"] = None
+                    st.session_state.pop("ftz_q_step", None)
+                    st.session_state.pop("ftz_q_answers", None)
+                    if st.button("Accéder à l'application quand même", key="ftz_bypass"):
+                        st.rerun()
 
 
 def _show_reset_password_page(token: str) -> None:
@@ -2557,12 +3043,12 @@ def faq_answer(question: str) -> str:
                 "- **Quality** : qualité de la boîte (ROE, marge nette, dette).\n"
                 "- **Momentum** : dynamique récente (Perf 6M + Perf 1Y).\n"
                 "- **Risk** : propreté du parcours (volatilité, drawdown).\n\n"
-                "Tu peux aussi activer le **Fantazia Score personnalisé** dans le Dashboard :\n"
-                "tu choisis les poids Value / Quality / Momentum / Risk, et le classement s'adapte à tes préférences."
+                "Vous pouvez aussi activer le **Fantazia Score personnalisé** dans le Dashboard :\n"
+                "vous choisissez les poids Value / Quality / Momentum / Risk, et le classement s'adapte à vos préférences."
             )
         if "perso" in q and "score" in q or "personnalis" in q:
             return (
-                "Le **Fantazia Score personnalisé** te permet de choisir toi-même les poids :\n"
+                "Le **Fantazia Score personnalisé** vous permet de choisir vous-même les poids :\n"
                 "- Value\n"
                 "- Quality\n"
                 "- Momentum\n"
@@ -2575,7 +3061,7 @@ def faq_answer(question: str) -> str:
             )
         if "alerte" in q or "alertes du jour" in q or "ruban" in q:
             return (
-                "Les **alertes** te permettent de surveiller :\n\n"
+                "Les **alertes** vous permettent de surveiller :\n\n"
                 "- une **variation journalière en %** (par ex. ≤ -3%, ≥ +5%),\n"
                 "- ou un **seuil de prix** (par ex. ≤ 200€, ≥ 300€).\n\n"
                 "Configuration :\n"
@@ -2588,15 +3074,15 @@ def faq_answer(question: str) -> str:
             )
         if "simulateur" in q or "portefeuille" in q:
             return (
-                "Le **simulateur** te permet de tester un portefeuille virtuel.\n\n"
+                "Le **simulateur** vous permet de tester un portefeuille virtuel.\n\n"
                 "- On prend le **prix au début de la période** comme prix d'entrée.\n"
-                "- Tu définis un **capital initial** et des **poids par action** (égaux ou custom).\n"
-                "- On calcule combien d'actions tu aurais acheté, puis la **valeur actuelle** avec le dernier prix.\n\n"
+                "- Vous définissez un **capital initial** et des **poids par action** (égaux ou custom).\n"
+                "- On calcule combien d'actions vous auriez acheté, puis la **valeur actuelle** avec le dernier prix.\n\n"
                 "Résultat :\n"
                 "- Valeur actuelle du portefeuille,\n"
                 "- Gain/perte totale en € et en %, \n"
                 "- Détail par ligne.\n\n"
-                "C'est une **simulation** (ça ne lit pas ton vrai compte broker)."
+                "C'est une **simulation** (ça ne lit pas votre vrai compte broker)."
             )
         if "heatmap" in q or "carte" in q:
             return (
@@ -2614,23 +3100,23 @@ def faq_answer(question: str) -> str:
                 "- **1** = bougent quasiment toujours ensemble,\n"
                 "- **0** = pas de lien clair,\n"
                 "- **-1** = bougent plutôt en sens opposé.\n\n"
-                "La heatmap de corrélation te montre quelles actions sont des \"clones\" entre elles, "
-                "et lesquelles diversifient davantage ton panier."
+                "La heatmap de corrélation vous montre quelles actions sont des \"clones\" entre elles, "
+                "et lesquelles diversifient davantage votre panier."
             )
         if "benchmark" in q or "indice" in q:
             return (
-                "Le **benchmark** te permet de comparer ton panier à un indice (S&P500, Nasdaq, CAC40, etc.).\n\n"
-                "- Dans la barre de gauche, choisis un indice dans **\"Benchmark (indice de référence)\"**.\n"
+                "Le **benchmark** vous permet de comparer votre panier à un indice (S&P500, Nasdaq, CAC40, etc.).\n\n"
+                "- Dans la barre de gauche, choisissez un indice dans **\"Benchmark (indice de référence)\"**.\n"
                 "- Les graphiques base 100 peuvent inclure l'indice.\n"
                 "- Le tableau calcule aussi la **surperformance 1Y vs benchmark** (en points de pourcentage), "
                 "si l'historique est suffisant."
             )
         if "note perso" in q or "note personnelle" in q or "personal note" in q:
             return (
-                "Dans **📄 Fiche action**, tu peux saisir une **note personnelle** pour chaque ticker.\n"
+                "Dans **📄 Fiche action**, vous pouvez saisir une **note personnelle** pour chaque ticker.\n"
                 "- Les notes sont stockées par compte dans `notes.json`.\n"
-                "- Elles ne sont visibles que par toi.\n"
-                "- Tu peux t'en servir pour noter tes idées, zones d'entrée, remarques, etc."
+                "- Elles ne sont visibles que par vous.\n"
+                "- Vous pouvez vous en servir pour noter vos idées, zones d'entrée, remarques, etc."
             )
         if "52" in q and "semaine" in q:
             return (
@@ -2654,9 +3140,9 @@ def faq_answer(question: str) -> str:
             )
         if "news" in q or "abonn" in q:
             return (
-                "Tu peux t'abonner aux news d'une action dans **📄 Fiche action** :\n"
-                "- coche *\"Suivre les news de TICKER\"*.\n"
-                "- Tes abonnements sont liés à ton compte.\n"
+                "Vous pouvez vous abonner aux news d'une action dans **📄 Fiche action** :\n"
+                "- cochez *\"Suivre les news\"*.\n"
+                "- Vos abonnements sont liés à votre compte.\n"
                 "- Dans le Dashboard, bloc **\"Mes news suivies\"** affiche les dernières news (fenêtre de quelques jours)."
             )
         if "watchlist" in q or "liste" in q:
@@ -2668,21 +3154,21 @@ def faq_answer(question: str) -> str:
             )
         if "langue" in q or "anglais" in q or "english" in q:
             return (
-                "Tu peux changer la **langue de l'interface** en haut de la barre de gauche :\n\n"
+                "Vous pouvez changer la **langue de l'interface** en haut de la barre de gauche :\n\n"
                 "- `Language / Langue` → FR ou EN.\n"
                 "- Les labels, titres, textes principaux s'adaptent.\n"
                 "- Les données (prix, ratios) restent identiques."
             )
         return (
             "Je suis l'assistant intégré de **Fantazia Finance**.\n\n"
-            "Je peux t'expliquer :\n"
+            "Je peux vous expliquer :\n"
             "- le **Fantazia Score (%)** (officiel + personnalisé),\n"
             "- le Dashboard (graphiques, heatmap, corrélation, benchmark),\n"
             "- les **alertes** (ruban + Alertes du jour),\n"
             "- le **simulateur de portefeuille**, \n"
             "- les **watchlists**, les **notes perso** et les **news suivies**, \n"
             "- la 52w range, les sources de données (Yahoo, Twelve, Finnhub, Polygon).\n\n"
-            "Pose ta question le plus clairement possible, par exemple :\n"
+            "Posez votre question le plus clairement possible, par exemple :\n"
             "- \"Explique-moi le Fantazia Score personnalisé\"\n"
             "- \"Comment lire la corrélation ?\"\n"
             "- \"A quoi sert le benchmark ?\""
@@ -2795,7 +3281,7 @@ def faq_answer(question: str) -> str:
         if "news" in q or "subscribe" in q:
             return (
                 "You can subscribe to stock news in **📄 Stock sheet**:\n"
-                "- check *\"Follow news of TICKER\"*.\n"
+                "- check *\"Follow news\"*.\n"
                 "- Subscriptions are linked to your account.\n"
                 "- The Dashboard **\"My followed news\"** block shows recent news over the last days."
             )
@@ -2832,6 +3318,18 @@ def faq_answer(question: str) -> str:
 
 
 # =========================================================
+# FTZ QUESTIONNAIRE — Obligatoire pour les nouveaux Premium
+# =========================================================
+_ftz_done = st.session_state.get("ftz_questionnaire_done")
+# True  → questionnaire complété, accès normal
+# False → premier accès premium, bloquer et afficher le questionnaire
+# None  → DB indisponible, laisser passer sans bloquer
+
+if is_premium() and _ftz_done is False:
+    show_ftz_questionnaire(CURRENT_USER)
+    st.stop()
+
+# =========================================================
 # TABS
 # =========================================================
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
@@ -2857,7 +3355,7 @@ else:
 with tab1:
     if st.session_state.get("analysis_limit_reached"):
         st.warning("🔒 Vous avez atteint la limite de **10 analyses par jour** pour les comptes gratuits.")
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, profitez d'analyses illimitées, d'exports CSV, d'alertes de prix et du FTZ Score personnalisé.")
         st.info("👉 Rendez-vous dans l'onglet 💎 Premium pour découvrir nos offres.")
     else:
         # Realtime best-effort
@@ -2924,6 +3422,48 @@ with tab1:
             if desc:
                 triggered_alerts.append({"ticker": ticker, "desc": desc})
 
+        # Envoi email si alertes déclenchées (max 1 email toutes les 24h)
+        if triggered_alerts and engine is not None:
+            try:
+                from datetime import datetime, timezone as _tz, timedelta as _td
+                now_utc = datetime.now(_tz.utc)
+                cutoff = now_utc - _td(hours=24)
+
+                with engine.connect() as conn_al:
+                    row_u = conn_al.execute(
+                        text("SELECT email FROM app_users WHERE username = :u"),
+                        {"u": CURRENT_USER}
+                    ).fetchone()
+                    row_n = conn_al.execute(
+                        text("SELECT MIN(last_notified_at) FROM alerts WHERE username = :u"),
+                        {"u": CURRENT_USER}
+                    ).fetchone()
+
+                user_email = row_u[0] if row_u and row_u[0] else None
+                last_notif = row_n[0] if row_n and row_n[0] else None
+
+                if last_notif is not None:
+                    if isinstance(last_notif, str):
+                        last_notif = datetime.fromisoformat(last_notif)
+                    if last_notif.tzinfo is None:
+                        last_notif = last_notif.replace(tzinfo=_tz.utc)
+
+                should_send = (last_notif is None or last_notif < cutoff)
+
+                if user_email and should_send:
+                    send_email(
+                        user_email,
+                        "🔔 Fantazia Finance — Alerte déclenchée sur votre compte",
+                        _build_alert_email(CURRENT_USER, triggered_alerts)
+                    )
+                    with engine.begin() as conn_upd:
+                        conn_upd.execute(
+                            text("UPDATE alerts SET last_notified_at = :n WHERE username = :u"),
+                            {"n": now_utc.isoformat(), "u": CURRENT_USER}
+                        )
+            except Exception:
+                pass
+
         # Ruban haut
         if triggered_alerts:
             messages = [
@@ -2984,7 +3524,7 @@ with tab1:
 
             st.markdown(tr("alerts_new"))
             if not is_premium():
-                show_premium_gate("La création d'alertes de prix est réservée aux comptes Premium.")
+                show_premium_gate("Avec un compte Premium, configurez des alertes sur n'importe quelle action : seuil de prix, variation en %, et recevez une notification dès que la condition est atteinte.")
             else:
                 alert_ticker = st.selectbox(
                     tr("alerts_ticker"),
@@ -3164,6 +3704,19 @@ with tab1:
 
                 fig = px.line(norm, title=f"Performance normalisée (base 100) — {sector_label}")
                 st.plotly_chart(fig, use_container_width=True)
+                lang_ui = st.session_state.get("lang", "fr")
+                if lang_ui == "fr":
+                    st.caption(
+                        "ℹ️ Chaque action part de 100 au début de la période affichée. "
+                        "Une valeur de 120 signifie +20 % depuis le départ, une valeur de 80 signifie -20 %. "
+                        "Ce graphique compare les performances relatives, indépendamment du prix absolu de chaque action."
+                    )
+                else:
+                    st.caption(
+                        "ℹ️ Each stock starts at 100 at the beginning of the displayed period. "
+                        "A value of 120 means +20% since the start, a value of 80 means -20%. "
+                        "This chart compares relative performance, regardless of each stock's absolute price."
+                    )
 
             elif graph_mode == tr("graph_mode_price"):
                 selected = st.selectbox(
@@ -3264,7 +3817,7 @@ with tab1:
             else:
                 st.session_state["fantazia_custom_enabled"] = False
                 wv_norm = wq_norm = wm_norm = wr_norm = None
-                show_premium_gate()
+                show_premium_gate("Avec un compte Premium, définissez vos propres pondérations Value / Quality / Momentum / Risk pour adapter le FTZ Score à votre façon d'analyser.")
 
         score_col_official = "Fantazia Score (%)"
         score_col_custom = "Fantazia Perso (%)"
@@ -3632,9 +4185,9 @@ with tab1:
                 styled = styled.applymap(perf_color, subset=["Fantazia Score (%)"])
             if "Fantazia Perso (%)" in display_df.columns:
                 styled = styled.applymap(perf_color, subset=["Fantazia Perso (%)"])
-            st.dataframe(styled, use_container_width=True)
+            display_dataframe(styled)
         except Exception:
-            st.dataframe(display_df, use_container_width=True)
+            display_dataframe(display_df)
 
         st.caption(
             "ℹ️ Fantazia Score (%) : 0–100% dans ce panier (100 = meilleure action). "
@@ -3819,7 +4372,7 @@ with tab1:
                 mime="text/csv"
             )
         else:
-            show_premium_gate("L'export CSV est réservé aux comptes Premium.")
+            show_premium_gate("Avec un compte Premium, exportez ce tableau en CSV pour l'analyser dans Excel ou tout autre outil de votre choix.")
 
         # Détails score
         with st.expander(tr("score_details_title")):
@@ -3835,7 +4388,7 @@ with tab1:
                 "- **Score Risk** : parcours plus ou moins propre (volatilité, drawdown).\n\n"
                 "Ensuite, on combine en un **Score Global interne**, puis on le transforme en **Fantazia Score (%)**.\n\n"
                 "**Fantazia Score personnalisé** : en changeant les poids Value/Quality/Momentum/Risk, "
-                "tu modifies la manière dont ces 4 blocs contribuent au score final."
+                "vous modifiez la manière dont ces 4 blocs contribuent au score final."
             )
 
         # Notes techniques
@@ -3860,9 +4413,9 @@ with tab1:
         )
         try:
             styled_src = src_df.style.applymap(source_badge_style, subset=["Source historique"])
-            st.dataframe(styled_src, use_container_width=True)
+            display_dataframe(styled_src)
         except Exception:
-            st.dataframe(src_df, use_container_width=True)
+            display_dataframe(src_df)
 
         # News suivies
         st.markdown("---")
@@ -3920,7 +4473,7 @@ with tab1:
 # =========================================================
 with tab2:
     if st.session_state.get("analysis_limit_reached"):
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, accédez à vos watchlists sans limite d'analyses quotidiennes.")
     else:
         st.subheader(tr("watchlists_title"))
         st.caption(tr("watchlists_caption"))
@@ -3935,7 +4488,7 @@ with tab2:
                 name = new_name.strip()
                 if name:
                     if not is_premium() and name not in watchlists and len(watchlists) >= 1:
-                        show_premium_gate("Les comptes gratuits sont limités à 1 watchlist.")
+                        show_premium_gate("Avec un compte Premium, créez autant de watchlists que vous le souhaitez pour organiser vos actions par thème, secteur ou stratégie.")
                     else:
                         tick_list = parse_tickers(new_tickers_txt)
                         watchlists[name] = tick_list
@@ -3952,7 +4505,7 @@ with tab2:
             else:
                 rows = [{"Watchlist": n, "Tickers": ", ".join(v)} for n, v in watchlists.items()]
                 df_wl = pd.DataFrame(rows)
-                st.dataframe(df_wl, use_container_width=True)
+                display_dataframe(df_wl)
                 st.markdown(tr("watchlists_delete_title"))
                 del_name = st.selectbox(tr("watchlists_delete_select"), list(watchlists.keys()))
                 if st.button(tr("watchlists_delete_btn")):
@@ -4029,7 +4582,7 @@ with tab2:
                         mime="application/pdf"
                     )
             else:
-                show_premium_gate("L'export des watchlists est réservé aux comptes Premium.")
+                show_premium_gate("Avec un compte Premium, exportez vos watchlists en PDF pour les consulter ou les partager facilement.")
         # ------------------------------------------------------
         # Centrale des notes / Notes hub
         # ------------------------------------------------------
@@ -4043,7 +4596,7 @@ with tab2:
 
         if not notes_user:
             msg = (
-                "Tu n'as encore écrit aucune note personnelle sur tes actions."
+                "Vous n'avez encore écrit aucune note personnelle sur vos actions."
                 if lang_ui == "fr"
                 else "You haven't written any personal notes on your stocks yet."
             )
@@ -4066,7 +4619,7 @@ with tab2:
             if not df_notes.empty:
                 df_notes = df_notes.sort_values("Ticker")
 
-            st.dataframe(df_notes, use_container_width=True)
+            display_dataframe(df_notes)
 
             # Édition centralisée d'une note
             if lang_ui == "fr":
@@ -4108,7 +4661,7 @@ with tab2:
 # =========================================================
 with tab3:
     if st.session_state.get("analysis_limit_reached"):
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, simulez autant de portefeuilles que vous le souhaitez, sans limite quotidienne.")
     else:
         st.subheader(tr("sim_title"))
         st.caption(tr("sim_caption"))
@@ -4199,15 +4752,14 @@ with tab3:
                 "Valeur actuelle (€)":   "{:,.2f} €",
                 "Perf depuis entrée (%)": "{:.2f}%",
             }
-            st.dataframe(
+            display_dataframe(
                 sim_df.style
                     .format(sim_fmt, na_rep="n/a")
                     .applymap(
                         lambda v: "color: green" if isinstance(v, (int, float)) and v > 0
                                   else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
                         subset=["Perf depuis entrée (%)"]
-                    ),
-                use_container_width=True
+                    )
             )
 
 
@@ -4216,7 +4768,7 @@ with tab3:
 # =========================================================
 with tab4:
     if st.session_state.get("analysis_limit_reached"):
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, consultez les fiches détaillées de toutes les actions sans limite : historique, ratios, notes personnelles et export PDF.")
     else:
         st.subheader(tr("stock_title"))
 
@@ -4365,7 +4917,7 @@ with tab4:
                     for name in wl_for_t:
                         st.markdown(f"- `{name}`")
                 else:
-                    st.write("Cette action n'est dans **aucune** de tes watchlists.")
+                    st.write("Cette action n'est dans **aucune** de vos watchlists.")
             else:
                 st.markdown("**⭐ Watchlists**")
                 if wl_for_t:
@@ -4407,7 +4959,7 @@ with tab4:
                 if n_alerts_t > 0:
                     st.write(f"✅ {n_alerts_t} alerte(s) configurée(s) sur cette action.")
                     st.caption(
-                        "Tu peux les gérer dans le Dashboard, section **Alertes**."
+                        "Vous pouvez les gérer dans le Dashboard, section **Alertes**."
                     )
                 else:
                     st.write("❌ Aucune alerte configurée sur cette action.")
@@ -4778,7 +5330,7 @@ with tab4:
                         mime="application/pdf"
                     )
         else:
-            show_premium_gate()
+            show_premium_gate("Avec un compte Premium, exportez cette fiche action en PDF avec tous ses ratios, graphiques et vos notes personnelles.")
 
 
 # =========================================================
@@ -4786,13 +5338,13 @@ with tab4:
 # =========================================================
 with tab5:
     if st.session_state.get("analysis_limit_reached"):
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, accédez à toutes les fonctionnalités de l'application sans restriction.")
     else:
         st.subheader(tr("help_title"))
         st.markdown(
             "- Comptes utilisateurs, watchlists, notes et alertes sont stockés localement (JSON).\n"
-            "- Fantazia Score = classement relatif des actions dans ton panier.\n"
-            "- Fantazia Score personnalisé = même logique mais avec tes poids.\n"
+            "- Fantazia Score = classement relatif des actions dans votre panier.\n"
+            "- Fantazia Score personnalisé = même logique mais avec vos poids.\n"
             "- Alertes = variation journalière ou seuil de prix, affichées en ruban et dans 'Alertes du jour'.\n"
             "- Simulateur = portefeuille virtuel basé sur les prix historiques chargés.\n"
             "- Benchmark = comparaison vs indice (surperf 1Y vs benchmark).\n"
@@ -4901,7 +5453,7 @@ with tab5:
 # =========================================================
 with tab6:
     if st.session_state.get("analysis_limit_reached"):
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, posez toutes vos questions à l'assistant Fantazia sans limite quotidienne.")
     else:
         st.subheader(tr("assistant_title"))
         st.caption(tr("assistant_caption"))
@@ -4989,7 +5541,7 @@ with tab6:
 # =========================================================
 with tab7:
     if st.session_state.get("analysis_limit_reached"):
-        show_premium_gate("Passez à Premium pour des analyses illimitées.")
+        show_premium_gate("Avec un compte Premium, accédez à votre profil complet, gérez vos préférences d'analyse et votre FTZ Score personnalisé.")
     else:
         import re
         _, col_profile, _ = st.columns([1, 2, 1])
@@ -5103,6 +5655,43 @@ with tab7:
                             msg_pwd.success("✅ Mot de passe mis à jour avec succès." if lang_ui == "fr" else "✅ Password updated successfully.")
                         else:
                             msg_pwd.error(tr("profile_err_db"))
+
+        st.divider()
+        lang_ui = st.session_state.get("lang", "fr")
+        st.subheader("⚙️ " + ("Mes préférences d'analyse" if lang_ui == "fr" else "My analysis preferences"))
+        st.write("")
+
+        if is_premium():
+            wv_cur = st.session_state.get("ftz_w_value", 0.28)
+            wq_cur = st.session_state.get("ftz_w_quality", 0.30)
+            wm_cur = st.session_state.get("ftz_w_momentum", 0.27)
+            wr_cur = st.session_state.get("ftz_w_risk", 0.15)
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("⚖️ Value",    f"{wv_cur*100:.1f} %")
+            c2.metric("🏆 Quality",  f"{wq_cur*100:.1f} %")
+            c3.metric("📈 Momentum", f"{wm_cur*100:.1f} %")
+            c4.metric("🛡️ Risk",     f"{wr_cur*100:.1f} %")
+
+            st.write("")
+            st.caption(
+                "Ces pondérations sont issues de votre questionnaire et appliquées à votre FTZ Score personnalisé."
+                if lang_ui == "fr" else
+                "These weights come from your questionnaire and are applied to your custom FTZ Score."
+            )
+            st.write("")
+
+            if st.button("🔄 Reconfigurer mes préférences d'analyse", key="ftz_reconfigure"):
+                st.session_state["ftz_questionnaire_done"] = False
+                st.session_state.pop("ftz_q_step", None)
+                st.session_state.pop("ftz_q_answers", None)
+                st.rerun()
+        else:
+            st.info(
+                "⚙️ Les préférences d'analyse personnalisées sont réservées aux membres Premium."
+                if lang_ui == "fr" else
+                "Custom analysis preferences are reserved for Premium members."
+            )
 
 # =========================================================
 # TAB 8 — PREMIUM
@@ -5220,6 +5809,22 @@ if CURRENT_USER == "alexandre 1":
                                     """), {"st": new_type, "exp": new_expiry, "u": target_user})
                                 st.success(f"✅ {target_user} → **{new_type}**" + (f" (expire {new_expiry[:10]})" if new_expiry else ""))
                                 st.session_state.pop("admin_confirm", None)
+                                # Envoi email premium si passage en premium
+                                if new_type == "premium":
+                                    try:
+                                        with engine.connect() as conn_email:
+                                            row_email = conn_email.execute(
+                                                text("SELECT email FROM app_users WHERE username = :u"),
+                                                {"u": target_user}
+                                            ).fetchone()
+                                            if row_email and row_email[0]:
+                                                send_email(
+                                                    row_email[0],
+                                                    "💎 Votre compte Fantazia Finance est maintenant Premium",
+                                                    _build_premium_email(target_user)
+                                                )
+                                    except Exception:
+                                        pass
                             except Exception as e:
                                 st.error(f"❌ Erreur DB : {e}")
 

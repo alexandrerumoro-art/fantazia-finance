@@ -29,6 +29,9 @@ def get_engine():
 
     url = DB_URL
 
+    # Basculer sur le Transaction pooler Supabase (port 6543 au lieu de 5432)
+    url = url.replace("pooler.supabase.com:5432", "pooler.supabase.com:6543")
+
     # Si ton URL commence par postgresql://, SQLAlchemy va souvent chercher psycopg2 par défaut.
     # On force psycopg (v3) :
     if url.startswith("postgresql://"):
@@ -36,7 +39,7 @@ def get_engine():
     elif url.startswith("postgres://"):
         url = "postgresql+psycopg://" + url[len("postgres://"):]
 
-    return create_engine(url, pool_pre_ping=True)
+    return create_engine(url, pool_pre_ping=True, pool_size=2, max_overflow=0)
 
 engine = get_engine()
 

@@ -287,6 +287,7 @@ def migrate_json_to_db(engine):
 # --- Clés API (depuis Streamlit Secrets / secrets.toml local) ---
 TWELVE_API_KEY = st.secrets.get("TWELVE_API_KEY", "")
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
+
 ALPHAVANTAGE_API_KEY = st.secrets.get("ALPHAVANTAGE_API_KEY", "")
 POLYGON_API_KEY = st.secrets.get("POLYGON_API_KEY", "")
 
@@ -363,13 +364,13 @@ TRANSLATIONS = {
         "sidebar_custom_tickers": "Tickers (séparés par virgules)",
         "sidebar_watchlist_select": "Choisis une watchlist",
         "sidebar_history": "Historique à charger",
-        "sidebar_auto_adjust": "Prix ajustés (Yahoo)",
+        "sidebar_auto_adjust": "Prix ajustés",
         "sidebar_source": "Source historique (fallback par action)",
         "sidebar_rt": "Activer prix temps réel (Premium Polygon)",
         "sidebar_refresh": "Auto-refresh (optionnel)",
         "sidebar_no_tickers": "Aucun ticker sélectionné.",
         "sidebar_api_detected": "Clés API détectées : ",
-        "sidebar_api_none": "Aucune clé API détectée : mode Auto = Yahoo uniquement.",
+        "sidebar_api_none": "Aucune clé API détectée : mode Auto = Finnhub uniquement.",
         "sidebar_benchmark": "Benchmark (indice de référence)",
         "tab_dashboard": "📊 Dashboard",
         "tab_watchlists": "⭐ Watchlists",
@@ -534,13 +535,13 @@ TRANSLATIONS = {
         "sidebar_custom_tickers": "Tickers (comma-separated)",
         "sidebar_watchlist_select": "Choose a watchlist",
         "sidebar_history": "History to load",
-        "sidebar_auto_adjust": "Adjusted prices (Yahoo)",
+        "sidebar_auto_adjust": "Adjusted prices",
         "sidebar_source": "Historical source (per-stock fallback)",
         "sidebar_rt": "Enable real-time prices (Premium Polygon)",
         "sidebar_refresh": "Auto-refresh (optional)",
         "sidebar_no_tickers": "No ticker selected.",
         "sidebar_api_detected": "API keys detected: ",
-        "sidebar_api_none": "No API key detected: Auto mode = Yahoo only.",
+        "sidebar_api_none": "No API key detected: Auto mode = Finnhub only.",
         "sidebar_benchmark": "Benchmark (reference index)",
         "tab_dashboard": "📊 Dashboard",
         "tab_watchlists": "⭐ Watchlists",
@@ -932,7 +933,7 @@ BG_PATHS = [
     r"C:\bourse-dashboard\Fantazia finance logo chatgpt.png",
     r"Fantazia finance logo chatgpt.png",
 ]
-set_watermark_logo(BG_PATHS, opacity=0.06, size_px=320)
+# set_watermark_logo(BG_PATHS, opacity=0.06, size_px=320)
 
 
 def rerun_app():
@@ -2456,8 +2457,6 @@ def format_price_with_currency(ticker: str, price: float) -> str:
 # =========================================================
 def pretty_source_name(s: str) -> str:
     s = (s or "").lower().strip()
-    if s == "yfinance":
-        return "🟡 Yahoo"
     if s == "twelve data":
         return "🔵 Twelve"
     if s == "finnhub":
@@ -2471,8 +2470,6 @@ def pretty_source_name(s: str) -> str:
 
 def source_badge_style(val: str) -> str:
     v = str(val)
-    if "Yahoo" in v:
-        return "background-color: rgba(245,196,0,0.18); color: #b18800; font-weight: 700;"
     if "Twelve" in v:
         return "background-color: rgba(80,140,255,0.18); color: #2f59b7; font-weight: 700;"
     if "Finnhub" in v:
@@ -2693,6 +2690,7 @@ def fetch_finnhub_single(ticker: str, period: str) -> pd.Series:
             "token": FINNHUB_API_KEY,
         }
         r = requests.get(url, params=params, timeout=20)
+
         if r.status_code == 429:
             return pd.Series(dtype=float)
         data = r.json() if r.content else {}
@@ -2788,10 +2786,6 @@ def load_news_finnhub(ticker: str, days: int = 7, max_items: int = 10) -> pd.Dat
 ProviderFn = Callable[[str, str, bool], pd.Series]
 
 
-def provider_yahoo(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
-    return fetch_yfinance_single(ticker, period, auto_adjust)
-
-
 def provider_twelve(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
     _ = auto_adjust
     return fetch_twelve_single(ticker, period)
@@ -2802,17 +2796,21 @@ def provider_finnhub(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
     return fetch_finnhub_single(ticker, period)
 
 
+def provider_yahoo(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
+    return fetch_yfinance_single(ticker, period, auto_adjust)
+
+
 def get_provider_chain(source_mode: str) -> List[Tuple[str, ProviderFn]]:
     if source_mode.startswith("Yahoo"):
         return [("yfinance", provider_yahoo)]
-    if source_mode.startswith("Twelve"):
-        return [("twelve data", provider_twelve)]
     if source_mode.startswith("Finnhub"):
         return [("finnhub", provider_finnhub)]
+    if source_mode.startswith("Twelve"):
+        return [("twelve data", provider_twelve)]
     return [
         ("yfinance", provider_yahoo),
-        ("twelve data", provider_twelve),
         ("finnhub", provider_finnhub),
+        ("twelve data", provider_twelve),
     ]
 
 
@@ -2869,33 +2867,50 @@ def fetch_benchmark_series(ticker: str, period: str, auto_adjust: bool) -> pd.Se
 def load_fundamentals(tickers: List[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
+        profile = {}
+        metric = {}
         try:
-            info = yf.Ticker(t).info
+            r = requests.get(
+                f"https://finnhub.io/api/v1/stock/profile2?symbol={t}&token={FINNHUB_API_KEY}",
+                timeout=15,
+            )
+            if r.status_code == 200:
+                profile = r.json() or {}
         except Exception:
-            info = {}
+            pass
+        try:
+            r = requests.get(
+                f"https://finnhub.io/api/v1/stock/metric?symbol={t}&metric=all&token={FINNHUB_API_KEY}",
+                timeout=15,
+            )
+            if r.status_code == 200:
+                metric = (r.json() or {}).get("metric", {})
+        except Exception:
+            pass
+
+        raw_mcap = profile.get("marketCapitalization")
         rows.append({
             "Ticker": t,
-            "Nom": info.get("shortName") or info.get("longName") or "",
-            "Secteur (API)": info.get("sector") or "",
-            "Industrie (API)": info.get("industry") or "",
-            "Pays": info.get("country") or "",
-            "Devise": info.get("currency") or "",
-            "Market Cap": info.get("marketCap"),
-            "P/E (trailing)": info.get("trailingPE"),
-            "P/B": info.get("priceToBook"),
-            "ROE": info.get("returnOnEquity"),
-            "Marge nette": info.get("profitMargins"),
-            "Dette/Capitaux": info.get("debtToEquity"),
-            "Div. Yield": info.get("dividendYield"),
-            "Beta": info.get("beta"),
-            "EPS (trailing)": info.get("trailingEps"),
-            "52w High": info.get("fiftyTwoWeekHigh"),
-            "52w Low": info.get("fiftyTwoWeekLow"),
-            "Exchange": info.get("exchange"),
-            # === NOUVEAU : données analystes Yahoo ===
-            "Reco (brut)": info.get("recommendationKey"),
-            "Reco moyenne": info.get("recommendationMean"),
-            "Nb analystes": info.get("numberOfAnalystOpinions"),
+            "Nom": profile.get("name") or "",
+            "Secteur (API)": profile.get("finnhubIndustry") or "",
+            "Industrie (API)": profile.get("finnhubIndustry") or "",
+            "Pays": profile.get("country") or "",
+            "Devise": profile.get("currency") or "",
+            "Exchange": profile.get("exchange") or "",
+            "Market Cap": raw_mcap * 1_000_000 if raw_mcap is not None else None,
+            "P/E (trailing)": metric.get("peBasicExclExtraTTM"),
+            "P/B": metric.get("pbQuarterly"),
+            "ROE": metric.get("roeTTM"),
+            "Marge nette": metric.get("netProfitMarginAnnual"),
+            "Dette/Capitaux": metric.get("totalDebt/totalEquityQuarterly"),
+            "Div. Yield": metric.get("dividendYieldIndicatedAnnual"),
+            "Beta": metric.get("beta"),
+            "EPS (trailing)": metric.get("epsAnnual"),
+            "52w High": metric.get("52WeekHigh"),
+            "52w Low": metric.get("52WeekLow"),
+            "Reco (brut)": None,
+            "Reco moyenne": None,
+            "Nb analystes": None,
         })
     return pd.DataFrame(rows).set_index("Ticker")
 
@@ -2986,10 +3001,10 @@ use_auto_adjust = st.sidebar.checkbox(tr("sidebar_auto_adjust"), value=True)
 price_source_mode = st.sidebar.selectbox(
     tr("sidebar_source"),
     [
-        "Auto (Yahoo → Twelve → Finnhub)",
+        "Auto (Yahoo → Finnhub → Twelve Data)",
         "Yahoo Finance (yfinance)",
+        "Finnhub",
         "Twelve Data",
-        "Finnhub"
     ],
     index=0
 )
@@ -3291,7 +3306,7 @@ def faq_answer(question: str) -> str:
             "- les **alertes** (ruban + Alertes du jour),\n"
             "- le **simulateur de portefeuille**, \n"
             "- les **watchlists**, les **notes perso** et les **news suivies**, \n"
-            "- la 52w range, les sources de données (Yahoo, Twelve, Finnhub, Polygon).\n\n"
+            "- la 52w range, les sources de données (Finnhub, Twelve Data, Polygon).\n\n"
             "Posez votre question le plus clairement possible, par exemple :\n"
             "- \"Explique-moi le Fantazia Score personnalisé\"\n"
             "- \"Comment lire la corrélation ?\"\n"
@@ -3431,7 +3446,7 @@ def faq_answer(question: str) -> str:
             "- **alerts** (ribbon + Alerts of the day),\n"
             "- the **portfolio simulator**, \n"
             "- **watchlists**, **personal notes** and **followed news**, \n"
-            "- the 52w range, data sources (Yahoo, Twelve, Finnhub, Polygon).\n\n"
+            "- the 52w range, data sources (Finnhub, Twelve Data, Polygon).\n\n"
             "Ask clearly, e.g.:\n"
             "- \"Explain the custom Fantazia Score\",\n"
             "- \"How to read correlation?\",\n"
@@ -3487,7 +3502,7 @@ with tab1:
         if use_realtime and POLYGON_API_KEY:
             rt_data = fetch_realtime_polygon_batch(list(prices.columns))
 
-        if st.button("🔄 Refresh prix (Polygon/Yahoo)"):
+        if st.button("🔄 Refresh prix (Polygon)"):
             if use_realtime and POLYGON_API_KEY:
                 rt_data = fetch_realtime_polygon_batch(list(prices.columns))
 
@@ -3746,7 +3761,7 @@ with tab1:
                 )
             else:
                 cols_price[i].metric(
-                    label=f"{t} (Yahoo)",
+                    label=f"{t} (EOD)",
                     value=format_price_with_currency(t, last_disp)
                 )
 
@@ -3771,7 +3786,7 @@ with tab1:
                         )
                     else:
                         c.metric(
-                            label=f"{t} (Yahoo)",
+                            label=f"{t} (EOD)",
                             value=format_price_with_currency(t, last_disp)
                         )
 
@@ -4285,9 +4300,9 @@ with tab1:
         col_formats = {}
         for c in display_df.columns:
             if c in ("Perf 1M", "Perf 3M", "Perf 6M", "Perf 1Y",
-                     "ROE", "Marge nette", "Vol annualisée", "Max Drawdown"):
+                     "Vol annualisée", "Max Drawdown"):
                 col_formats[c] = "{:.2%}"   # décimal pur → ×100 auto
-            elif c in ("Dette/Capitaux", "Div. Yield",
+            elif c in ("ROE", "Marge nette", "Dette/Capitaux", "Div. Yield",
                        "Fantazia Score (%)", "Fantazia Perso (%)"):
                 col_formats[c] = "{:.2f}%"  # déjà à bonne échelle
             elif c in ("P/E (trailing)", "P/B"):
@@ -4966,11 +4981,11 @@ with tab4:
                 with ratio_col_a:
                     st.metric("Market Cap", _fmt(info_row.get('Market Cap'), 'cap'))
                     st.metric("P/E", _fmt(info_row.get('P/E (trailing)'), 'ratio'))
-                    st.metric("ROE", _fmt(info_row.get('ROE'), 'pct'))
+                    st.metric("ROE", _fmt(info_row.get('ROE'), 'pct_raw'))
                     st.metric("Dette/Cap.", _fmt(info_row.get('Dette/Capitaux'), 'pct_raw'))
                 with ratio_col_b:
                     st.metric("P/B", _fmt(info_row.get('P/B'), 'ratio'))
-                    st.metric("Marge nette", _fmt(info_row.get('Marge nette'), 'pct'))
+                    st.metric("Marge nette", _fmt(info_row.get('Marge nette'), 'pct_raw'))
                     st.metric("Div. Yield", _fmt(info_row.get('Div. Yield'), 'pct_raw'))
 
             # 52w range
@@ -5138,7 +5153,7 @@ with tab4:
         title_sent = "Sentiment des analystes" if lang_ui == "fr" else "Analyst sentiment"
         st.markdown("### " + title_sent)
 
-        # On récupère tout d'un coup via yfinance
+        # On récupère tout d'un coup via Finnhub
         reco_key = None
         reco_mean = None
         reco_n = None
@@ -5147,15 +5162,45 @@ with tab4:
         target_low = None
 
         try:
-            info_full = yf.Ticker(t_selected).info
-            # Recos
-            reco_key = info_full.get("recommendationKey")
-            reco_mean = info_full.get("recommendationMean")
-            reco_n = info_full.get("numberOfAnalystOpinions")
-            # Objectifs de cours
-            target_mean = info_full.get("targetMeanPrice")
-            target_high = info_full.get("targetHighPrice")
-            target_low = info_full.get("targetLowPrice")
+            if FINNHUB_API_KEY:
+                # 1. Recommandations analystes
+                r_reco = requests.get(
+                    f"https://finnhub.io/api/v1/stock/recommendation?symbol={t_selected}&token={FINNHUB_API_KEY}",
+                    timeout=15,
+                )
+                if r_reco.status_code == 200:
+                    reco_list = r_reco.json() or []
+                    if reco_list:
+                        latest = reco_list[0]
+                        sb = latest.get("strongBuy", 0) or 0
+                        b  = latest.get("buy", 0) or 0
+                        h  = latest.get("hold", 0) or 0
+                        s  = latest.get("sell", 0) or 0
+                        ss = latest.get("strongSell", 0) or 0
+                        reco_n = sb + b + h + s + ss
+                        if reco_n > 0:
+                            reco_mean = (1*sb + 2*b + 3*h + 4*s + 5*ss) / reco_n
+                            if reco_mean <= 1.5:
+                                reco_key = "strong_buy"
+                            elif reco_mean <= 2.5:
+                                reco_key = "buy"
+                            elif reco_mean <= 3.5:
+                                reco_key = "hold"
+                            elif reco_mean <= 4.5:
+                                reco_key = "sell"
+                            else:
+                                reco_key = "strong_sell"
+                # 2. Objectifs de cours
+                r_target = requests.get(
+                    f"https://finnhub.io/api/v1/stock/price-target?symbol={t_selected}&token={FINNHUB_API_KEY}",
+                    timeout=15,
+                )
+
+                if r_target.status_code == 200:
+                    tdata = r_target.json() or {}
+                    target_mean = tdata.get("targetMean")
+                    target_high = tdata.get("targetHigh")
+                    target_low  = tdata.get("targetLow")
         except Exception:
             pass
 
@@ -5192,11 +5237,11 @@ with tab4:
                 if isinstance(reco_mean, (int, float, np.number)) and not pd.isna(reco_mean):
                     if lang_ui == "fr":
                         extra.append(
-                            f"Note moyenne Yahoo Finance : {reco_mean:.2f} (1 = Fort achat, 5 = Fort vente)."
+                            f"Note moyenne analystes : {reco_mean:.2f} (1 = Fort achat, 5 = Fort vente)."
                         )
                     else:
                         extra.append(
-                            f"Yahoo Finance average rating: {reco_mean:.2f} (1 = Strong buy, 5 = Strong sell)."
+                            f"Analyst average rating: {reco_mean:.2f} (1 = Strong buy, 5 = Strong sell)."
                         )
                 if isinstance(reco_n, (int, float, np.number)) and not pd.isna(reco_n) and reco_n > 0:
                     if lang_ui == "fr":
@@ -5247,7 +5292,7 @@ with tab4:
     - Zone orange : plutôt *Neutre* / conserver.
     - Zone verte : plutôt *Achat* / *Fort achat*.
 
-    Échelle Yahoo Finance (moyenne des analystes) :
+    Échelle analystes (moyenne) :
     - 1,0 = Fort achat
     - 2,0 = Achat
     - 3,0 = Neutre
@@ -5262,7 +5307,7 @@ with tab4:
     - Orange area: more *Neutral* / hold.
     - Green area: *Buy* / *Strong buy* bias.
 
-    Yahoo Finance rating scale (average of analysts):
+    Analyst rating scale (average):
     - 1.0 = Strong buy
     - 2.0 = Buy
     - 3.0 = Hold
@@ -5275,7 +5320,7 @@ with tab4:
                 if isinstance(reco_mean, (int, float, np.number)) and not pd.isna(reco_mean):
                     if lang_ui == "fr":
                         sentence = (
-                            f"Les analystes Yahoo classent actuellement **{t_selected}** en **{label.lower()}** "
+                            f"Les analystes classent actuellement **{t_selected}** en **{label.lower()}** "
                             f"(score moyen {reco_mean:.2f} / 5"
                         )
                         if isinstance(reco_n, (int, float, np.number)) and not pd.isna(reco_n) and reco_n > 0:
@@ -5283,7 +5328,7 @@ with tab4:
                         sentence += ")."
                     else:
                         sentence = (
-                            f"Yahoo analysts currently rate **{t_selected}** as **{label.lower()}** "
+                            f"Analysts currently rate **{t_selected}** as **{label.lower()}** "
                             f"(average score {reco_mean:.2f} / 5"
                         )
                         if isinstance(reco_n, (int, float, np.number)) and not pd.isna(reco_n) and reco_n > 0:
@@ -5435,8 +5480,8 @@ with tab4:
                         ratio_data = [
                             ["P/E (trailing)", _fmt_pdf(info_row.get("P/E (trailing)"), "ratio")],
                             ["P/B", _fmt_pdf(info_row.get("P/B"), "ratio")],
-                            ["ROE", _fmt_pdf(info_row.get("ROE"), "pct")],
-                            ["Marge nette", _fmt_pdf(info_row.get("Marge nette"), "pct")],
+                            ["ROE", _fmt_pdf(info_row.get("ROE"), "pct_raw")],
+                            ["Marge nette", _fmt_pdf(info_row.get("Marge nette"), "pct_raw")],
                             ["Dette/Capitaux", _fmt_pdf(info_row.get("Dette/Capitaux"), "pct_raw")],
                             ["Div. Yield", _fmt_pdf(info_row.get("Div. Yield"), "pct_raw")],
                         ]
@@ -5474,7 +5519,7 @@ with tab5:
             "- Benchmark = comparaison vs indice (surperf 1Y vs benchmark).\n"
             "- Corrélation = qui bouge avec qui (et dans quelle intensité).\n"
             "- News = via Finnhub (si FINNHUB_API_KEY présente).\n"
-            "- Historique = Yahoo / Twelve / Finnhub avec fallback par action."
+            "- Historique = Finnhub / Twelve Data avec fallback par action."
         )
         st.divider()
         st.markdown("### " + tr("help_glossary"))

@@ -20,7 +20,16 @@ import plotly.express as px
 import streamlit as st
 from sqlalchemy import create_engine, text
 
-DB_URL = st.secrets.get("DB_URL", "").strip()
+
+def get_secret(key, default=""):
+    """Lit un secret depuis st.secrets (local) ou os.environ (Railway/prod)."""
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.environ.get(key, default)
+
+
+DB_URL = get_secret("DB_URL", "").strip()
 
 @st.cache_resource
 def get_engine():
@@ -288,17 +297,17 @@ def migrate_json_to_db(engine):
 
 
 # --- Clés API (depuis Streamlit Secrets / secrets.toml local) ---
-TWELVE_API_KEY = st.secrets.get("TWELVE_API_KEY", "")
-FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
+TWELVE_API_KEY = get_secret("TWELVE_API_KEY", "")
+FINNHUB_API_KEY = get_secret("FINNHUB_API_KEY", "")
 
-ALPHAVANTAGE_API_KEY = st.secrets.get("ALPHAVANTAGE_API_KEY", "")
-POLYGON_API_KEY = st.secrets.get("POLYGON_API_KEY", "")
+ALPHAVANTAGE_API_KEY = get_secret("ALPHAVANTAGE_API_KEY", "")
+POLYGON_API_KEY = get_secret("POLYGON_API_KEY", "")
 
-USERS_JSON_B64 = st.secrets.get("USERS_JSON_B64", "")
-WATCHLISTS_JSON_B64 = st.secrets.get("WATCHLISTS_JSON_B64", "")
-ALERTS_JSON_B64 = st.secrets.get("ALERTS_JSON_B64", "")
-NOTES_JSON_B64 = st.secrets.get("NOTES_JSON_B64", "")
-NEWS_SUBSCRIPTIONS_JSON_B64 = st.secrets.get("NEWS_SUBSCRIPTIONS_JSON_B64", "")
+USERS_JSON_B64 = get_secret("USERS_JSON_B64", "")
+WATCHLISTS_JSON_B64 = get_secret("WATCHLISTS_JSON_B64", "")
+ALERTS_JSON_B64 = get_secret("ALERTS_JSON_B64", "")
+NOTES_JSON_B64 = get_secret("NOTES_JSON_B64", "")
+NEWS_SUBSCRIPTIONS_JSON_B64 = get_secret("NEWS_SUBSCRIPTIONS_JSON_B64", "")
 
 
 
@@ -998,10 +1007,10 @@ def send_email(to: str, subject: str, html_body: str) -> bool:
     import traceback
     debug_lines = []
     try:
-        smtp_server = st.secrets.get("smtp_server", "")
-        smtp_port_raw = st.secrets.get("smtp_port", 465)
-        smtp_login = st.secrets.get("smtp_login", "")
-        smtp_password = st.secrets.get("smtp_password", "")
+        smtp_server = get_secret("smtp_server", "")
+        smtp_port_raw = get_secret("smtp_port", 465)
+        smtp_login = get_secret("smtp_login", "")
+        smtp_password = get_secret("smtp_password", "")
         smtp_port = int(smtp_port_raw)
 
         debug_lines.append(f"smtp_server='{smtp_server}'")
@@ -2030,7 +2039,7 @@ def ensure_authenticated() -> str:
                         if result:
                             username_r, token_r = result
                             try:
-                                app_url = st.secrets.get("APP_URL", "http://localhost:8501")
+                                app_url = get_secret("APP_URL", "http://localhost:8501")
                             except Exception:
                                 app_url = "http://localhost:8501"
                             reset_link = f"{app_url}?reset_token={token_r}"

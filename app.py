@@ -2619,6 +2619,7 @@ def filter_period_df(df: pd.DataFrame, period: str) -> pd.DataFrame:
 # =========================================================
 # PRICE PROVIDERS
 # =========================================================
+@st.cache_data(ttl=900)
 def fetch_yfinance_single(ticker: str, period: str, auto_adjust: bool) -> pd.Series:
     try:
         data = yf.download([ticker], period=period, auto_adjust=auto_adjust, progress=False)
@@ -2639,6 +2640,7 @@ def fetch_yfinance_single(ticker: str, period: str, auto_adjust: bool) -> pd.Ser
         return pd.Series(dtype=float)
 
 
+@st.cache_data(ttl=900)
 def fetch_twelve_single(ticker: str, period: str) -> pd.Series:
     if not TWELVE_API_KEY:
         return pd.Series(dtype=float)
@@ -2672,6 +2674,7 @@ def fetch_twelve_single(ticker: str, period: str) -> pd.Series:
         return pd.Series(dtype=float)
 
 
+@st.cache_data(ttl=900)
 def fetch_finnhub_single(ticker: str, period: str) -> pd.Series:
     if not FINNHUB_API_KEY:
         return pd.Series(dtype=float)
@@ -2723,6 +2726,7 @@ def fetch_finnhub_single(ticker: str, period: str) -> pd.Series:
 # =========================================================
 # REALTIME POLYGON
 # =========================================================
+@st.cache_data(ttl=60)
 def fetch_realtime_polygon_last(ticker: str) -> Optional[Tuple[float, pd.Timestamp]]:
     if not POLYGON_API_KEY:
         return None
@@ -2745,6 +2749,7 @@ def fetch_realtime_polygon_last(ticker: str) -> Optional[Tuple[float, pd.Timesta
         return None
 
 
+@st.cache_data(ttl=60)
 def fetch_realtime_polygon_batch(tickers: List[str]) -> Dict[str, Tuple[float, pd.Timestamp]]:
     out: Dict[str, Tuple[float, pd.Timestamp]] = {}
     for t in tickers:

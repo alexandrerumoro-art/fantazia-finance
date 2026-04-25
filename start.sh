@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Génère le fichier secrets.toml depuis les variables d'environnement Railway
-mkdir -p .streamlit
+mkdir -p /app/.streamlit
 
-cat > .streamlit/secrets.toml << EOF
+cat > /app/.streamlit/secrets.toml << EOF
 TWELVE_API_KEY = "${TWELVE_API_KEY}"
 FINNHUB_API_KEY = "${FINNHUB_API_KEY}"
 ALPHAVANTAGE_API_KEY = "${ALPHAVANTAGE_API_KEY}"
@@ -16,6 +16,8 @@ smtp_port = ${smtp_port}
 smtp_login = "${smtp_login}"
 smtp_password = "${smtp_password}"
 EOF
+
+echo "✅ secrets.toml generated at /app/.streamlit/secrets.toml"
 
 # Démarre Streamlit sur le port dynamique assigné par Railway
 streamlit run app.py \

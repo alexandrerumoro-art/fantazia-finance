@@ -4320,13 +4320,13 @@ with tab1:
 
         try:
             styled = display_df.style.format(col_formats, na_rep="—")
-            styled = styled.applymap(source_badge_style, subset=["Source historique"])
+            styled = styled.map(source_badge_style, subset=["Source historique"])
             if perf_cols_subset:
-                styled = styled.applymap(perf_color, subset=perf_cols_subset)
+                styled = styled.map(perf_color, subset=perf_cols_subset)
             if "Fantazia Score (%)" in display_df.columns:
-                styled = styled.applymap(perf_color, subset=["Fantazia Score (%)"])
+                styled = styled.map(perf_color, subset=["Fantazia Score (%)"])
             if "Fantazia Perso (%)" in display_df.columns:
-                styled = styled.applymap(perf_color, subset=["Fantazia Perso (%)"])
+                styled = styled.map(perf_color, subset=["Fantazia Perso (%)"])
             display_dataframe(styled)
         except Exception:
             display_dataframe(display_df)
@@ -4554,7 +4554,7 @@ with tab1:
             [{"Ticker": t, "Source historique": pretty_source_name(source_map.get(t, "none"))} for t in prices.columns]
         )
         try:
-            styled_src = src_df.style.applymap(source_badge_style, subset=["Source historique"])
+            styled_src = src_df.style.map(source_badge_style, subset=["Source historique"])
             display_dataframe(styled_src)
         except Exception:
             display_dataframe(src_df)
@@ -4897,7 +4897,7 @@ with tab3:
             display_dataframe(
                 sim_df.style
                     .format(sim_fmt, na_rep="n/a")
-                    .applymap(
+                    .map(
                         lambda v: "color: green" if isinstance(v, (int, float)) and v > 0
                                   else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
                         subset=["Perf depuis entrée (%)"]
